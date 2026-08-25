@@ -1,0 +1,1645 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SUJANGIRI StudyTracker — Student + Teacher/Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#f4f7fb;--card:#fff;--text:#172033;--muted:#667085;
+  --line:#e5e7eb;--accent:#2563eb;--danger:#dc2626;--ok:#16a34a;--warn:#d97706;
+  --shadow:0 12px 35px rgba(15,23,42,.08)
+}
+html.dark{--bg:#0f172a;--card:#1e293b;--text:#f1f5f9;--muted:#94a3b8;--line:#475569;--shadow:0 12px 35px rgba(0,0,0,.3)}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+.hidden{display:none!important}
+.wrap{max-width:1200px;margin:auto;padding:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+.auth{min-height:100vh;display:grid;place-items:center;padding:20px}
+.auth .card{width:min(460px,100%)}
+.logo{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:#111827;color:#fff;font-size:29px;font-weight:800;margin-bottom:12px}
+.title{font-size:24px;font-weight:800;margin:0}
+.muted{color:var(--muted)}
+.field{width:100%;padding:11px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--text);margin-top:6px}
+textarea.field{resize:vertical;min-height:80px}
+.row{margin:12px 0}
+.btn{border:0;border-radius:11px;padding:10px 15px;background:var(--accent);color:#fff;font-weight:700}
+.btn.secondary{background:#eef2ff;color:#1e40af}
+.btn.danger{background:#fee2e2;color:#991b1b}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.btn.success{background:#dcfce7;color:#166534}
+.btn.sm{padding:6px 10px;font-size:12px;border-radius:8px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-tabs{display:flex;gap:8px;margin:20px 0 12px}
+.auth-tabs button{flex:1}
+.msg{padding:10px 12px;border-radius:10px;background:#f1f5f9;margin:12px 0;font-size:14px}
+.msg.ok{background:#dcfce7;color:#166534}.msg.err{background:#fee2e2;color:#991b1b}
+header{position:sticky;top:0;z-index:10;background:rgba(244,247,251,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+html.dark header{background:rgba(15,23,42,.92)}
+.head{max-width:1200px;margin:auto;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{font-weight:800}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.role-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:#eef2ff;color:#1e40af}
+.role-badge.teacher{background:#fef3c7;color:#92400e}
+.sidebar{position:fixed;left:0;top:0;width:230px;height:100vh;background:var(--card);border-right:1px solid var(--line);overflow-y:auto;padding:20px 0;z-index:1000;transform:translateX(-100%);transition:.3s}
+.sidebar.open{transform:translateX(0)}
+.sidebar-item{padding:12px 20px;cursor:pointer;border-left:3px solid transparent}
+.sidebar-item:hover{background:var(--line)}
+.sidebar-item.active{border-left-color:var(--accent);color:var(--accent);font-weight:600}
+.nav-toggle{display:none;background:transparent;border:none;color:var(--text);font-size:20px}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:999}
+.sidebar-overlay.active{display:block}
+.bottom-nav{display:none;position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);z-index:50;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+.bottom-nav-inner{display:flex;justify-content:space-around}
+.bottom-nav-item{flex:1;background:transparent;border:none;color:var(--muted);font-size:10px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:10px}
+.bottom-nav-item span{font-size:18px}
+.bottom-nav-item.active{color:var(--accent);font-weight:700}
+.hero{margin:0 0 16px;background:linear-gradient(135deg,#111827,#1d4ed8);color:#fff;border-radius:20px;padding:22px}
+.hero h2{margin:0 0 4px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 16px}
+.stat{padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.stat span{font-size:12px}.stat b{font-size:20px;display:block;margin-top:2px}
+.progress{height:9px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px}
+.progress>div{height:100%;background:#22c55e}
+.empty{text-align:center;color:var(--muted);padding:30px 10px}
+.topline{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.q-card{border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+.opt{display:block;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--text);margin-top:8px}
+.opt.correct{background:#dcfce7;border-color:#16a34a}
+.opt.wrong{background:#fee2e2;border-color:#dc2626}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700;background:var(--line);margin-right:4px}
+.pill.green{background:#dcfce7;color:#166534}.pill.orange{background:#ffedd5;color:#9a3412}.pill.red{background:#fee2e2;color:#991b1b}
+.timer-display{font-size:48px;font-weight:800;text-align:center;margin:10px 0;font-variant-numeric:tabular-nums}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.search{flex:1;min-width:140px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--text)}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;place-items:center;overflow:auto}
+.modal.active{display:grid}
+.modal-content{background:var(--card);border-radius:18px;padding:24px;max-width:560px;width:90%;margin:20px auto}
+.close-btn{float:right;background:none;border:none;font-size:26px;cursor:pointer;color:var(--text)}
+.file{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--line)}
+.file:last-child{border-bottom:0}
+.fname{font-weight:700;word-break:break-word}
+.meta{font-size:12px;color:var(--muted);margin-top:2px}
+.bar-row{margin:8px 0}
+.bar-track{height:10px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:4px}
+.bar-fill{height:100%;background:var(--accent)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);font-size:13px}
+@media(max-width:768px){
+ .wrap{padding:12px;padding-bottom:78px}.stats{grid-template-columns:1fr 1fr}
+ .nav-toggle{display:block}.sidebar{width:78%}.bottom-nav{display:block}
+ .modal-content{padding:18px}
+ table{font-size:12px}
+}
+
+/* ================= SINGLE-FILE LOGIN ================= */
+#loginView{min-height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(135deg,#eff6ff,#f8fafc)}
+#loginView .login-card{width:min(460px,100%);background:var(--card);border:1px solid var(--line);border-radius:22px;box-shadow:0 18px 55px rgba(15,23,42,.10);padding:26px}
+#loginView .login-logo{width:66px;height:66px;border-radius:18px;display:grid;place-items:center;background:#111827;color:#fff;font-size:30px;font-weight:800;margin-bottom:14px}
+#loginView .login-title{margin:0;font-size:25px}
+#loginView .login-tabs{display:flex;gap:8px;margin:20px 0 14px}
+#loginView .login-tabs button{flex:1}
+#loginView .login-field{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:var(--card);color:var(--text);margin-top:6px}
+#loginView .login-row{margin:13px 0}
+#loginView .password-wrap{position:relative}
+#loginView .password-wrap .login-field{padding-right:48px}
+#loginView .eye-btn{position:absolute;right:7px;bottom:6px;border:0;background:transparent;padding:7px;cursor:pointer;font-size:17px}
+#loginView .login-msg{padding:11px 13px;border-radius:11px;margin:12px 0;font-size:14px}
+#loginView .login-msg.ok{background:#dcfce7;color:#166534}
+#loginView .login-msg.err{background:#fee2e2;color:#991b1b}
+#loginView .login-hidden{display:none!important}
+#loginView .login-status{font-size:12px;margin-top:12px}
+#loginView .login-footer{text-align:center;font-size:12px;color:var(--muted);margin-top:16px}
+
+</style>
+</head>
+<body>
+
+<!-- ================= SINGLE-FILE LOGIN / AUTH ================= -->
+<div id="loginView" class="hidden">
+  <section class="login-card">
+    <div class="login-logo">📘</div>
+    <h1 class="login-title">SUJANGIRI StudyTracker</h1>
+    <p class="muted">Student + Teacher/Admin study platform</p>
+
+    <div class="login-tabs">
+      <button id="loginTabBtn" class="btn" type="button">Login</button>
+      <button id="signupTabBtn" class="btn ghost" type="button">Create account</button>
+    </div>
+
+    <div id="loginMessage" class="login-msg login-hidden" role="alert"></div>
+
+    <form id="singleLoginForm" novalidate>
+      <div class="login-row">
+        <label for="singleLoginEmail">Email</label>
+        <input id="singleLoginEmail" class="login-field" type="email" autocomplete="email" required placeholder="you@example.com">
+      </div>
+
+      <div class="login-row">
+        <label for="singleLoginPassword">Password</label>
+        <div class="password-wrap">
+          <input id="singleLoginPassword" class="login-field" type="password" autocomplete="current-password" required placeholder="Your password">
+          <button class="eye-btn" type="button" data-login-toggle="singleLoginPassword">👁</button>
+        </div>
+      </div>
+
+      <button id="singleLoginBtn" class="btn" style="width:100%" type="submit">Login</button>
+      <p class="muted" style="font-size:12px;margin:10px 0 0">
+        The same login is used for students and Teacher/Admin. Your database role decides which dashboard you see.
+      </p>
+    </form>
+
+    <form id="singleSignupForm" class="login-hidden" novalidate>
+      <div class="login-row">
+        <label for="singleSignupName">Full name</label>
+        <input id="singleSignupName" class="login-field" type="text" autocomplete="name" required minlength="2" placeholder="Your full name">
+      </div>
+
+      <div class="login-row">
+        <label for="singleSignupEmail">Email</label>
+        <input id="singleSignupEmail" class="login-field" type="email" autocomplete="email" required placeholder="you@example.com">
+      </div>
+
+      <div class="login-row">
+        <label for="singleSignupPassword">Password</label>
+        <div class="password-wrap">
+          <input id="singleSignupPassword" class="login-field" type="password" autocomplete="new-password" required minlength="8" placeholder="At least 8 characters">
+          <button class="eye-btn" type="button" data-login-toggle="singleSignupPassword">👁</button>
+        </div>
+      </div>
+
+      <button id="singleSignupBtn" class="btn" style="width:100%" type="submit">Create student account</button>
+      <p class="muted" style="font-size:12px;margin-bottom:0">
+        Public signup always creates a <strong>student</strong>. Teacher/Admin access is assigned securely by the database.
+      </p>
+    </form>
+
+    <button id="singleForgotBtn" class="btn ghost" style="width:100%;margin-top:10px" type="button">Forgot password?</button>
+    <div id="singleNetworkStatus" class="login-status"></div>
+    <div class="login-footer">You are using one SUJANGIRI HTML file. No separate login page is required.</div>
+  </section>
+</div>
+
+<div id="bootScreen" style="position:fixed;inset:0;z-index:5000;background:var(--bg);display:grid;place-items:center;padding:20px">
+  <div class="card" style="width:min(520px,100%);text-align:center">
+    <div class="logo" style="margin:0 auto 12px">📘</div>
+    <h2 style="margin:0 0 8px">Loading SUJANGIRI</h2>
+    <p id="bootMessage" class="muted">Checking your secure session…</p>
+    <div id="bootError" class="msg err hidden" style="text-align:left;margin-top:14px">
+      <strong>Unable to load your dashboard.</strong>
+      <div id="bootErrorText" style="margin-top:6px"></div>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn" onclick="location.reload()">Retry</button>
+        <button class="btn danger" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="appView" class="hidden">
+<button class="nav-toggle" id="navToggleBtn" onclick="toggleSidebar()">☰</button>
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<div id="sidebar" class="sidebar"></div>
+
+<header>
+  <div class="head">
+    <div><div class="brand">📘 SUJANGIRI</div><small class="muted" id="headerEmail"></small></div>
+    <div class="actions">
+      <span class="role-badge" id="roleBadge">Student</span>
+      <button class="btn ghost" onclick="toggleTheme()">🌙</button>
+      <button class="btn danger" onclick="logout()">Logout</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="mainWrap">
+
+<!-- ============ TEACHER: OVERVIEW ============ -->
+<section id="t_overviewTab" class="hidden">
+  <section class="hero"><h2>Teacher Control Center</h2><p style="margin:0;opacity:.85">Manage your classroom.</p></section>
+  <section class="stats">
+    <div class="stat"><span class="muted">Students</span><b id="ov_students">0</b></div>
+    <div class="stat"><span class="muted">Documents</span><b id="ov_docs">0</b></div>
+    <div class="stat"><span class="muted">Questions</span><b id="ov_questions">0</b></div>
+    <div class="stat"><span class="muted">Quizzes</span><b id="ov_quizzes">0</b></div>
+  </section>
+  <section class="stats">
+    <div class="stat"><span class="muted">Active Polls</span><b id="ov_polls">0</b></div>
+    <div class="stat"><span class="muted">Announcements</span><b id="ov_ann">0</b></div>
+    <div class="stat"><span class="muted">Attempts Today</span><b id="ov_attempts_today">0</b></div>
+    <div class="stat"><span class="muted">Avg Score</span><b id="ov_avg_score">0%</b></div>
+  </section>
+  <section class="card">
+    <h3 style="margin-top:0">Quick Actions</h3>
+    <div class="actions">
+      <button class="btn secondary" onclick="switchTab('t_documents')">📄 Upload Document</button>
+      <button class="btn secondary" onclick="switchTab('t_pyq')">➕ Add Question</button>
+      <button class="btn secondary" onclick="switchTab('t_quizzes')">📝 Create Quiz</button>
+      <button class="btn secondary" onclick="switchTab('t_polls')">📊 Create Poll</button>
+      <button class="btn secondary" onclick="switchTab('t_announcements')">📢 Announcement</button>
+      <button class="btn secondary" onclick="switchTab('t_timetable')">🗓️ Schedule</button>
+      <button class="btn secondary" onclick="switchTab('t_students')">👥 Students</button>
+    </div>
+  </section>
+  <section class="card">
+    <h3 style="margin-top:0">Recent Admin Actions</h3>
+    <div id="auditList"><div class="empty">No actions logged yet</div></div>
+  </section>
+</section>
+
+<!-- ============ TEACHER: DOCUMENTS ============ -->
+<section id="t_documentsTab" class="hidden">
+  <section class="card">
+    <div class="topline"><h2 style="margin:0">Documents</h2>
+      <button class="btn secondary" onclick="openUploadDocModal()">⬆️ Upload</button></div>
+    <div id="teacherDocList"><div class="empty">No documents yet</div></div>
+  </section>
+</section>
+
+<!-- ============ TEACHER: PYQ ============ -->
+<section id="t_pyqTab" class="hidden">
+  <section class="card">
+    <div class="topline"><h2 style="margin:0">PYQ / Question Bank</h2>
+      <button class="btn secondary" onclick="openAddQuestionModal()">➕ Add Question</button></div>
+    <div class="toolbar">
+      <select id="tqFilterSubject" class="search" style="flex:0" onchange="renderTeacherQuestions()"><option value="">All Subjects</option></select>
+      <input id="tqSearch" class="search" placeholder="🔎 Search..." oninput="renderTeacherQuestions()">
+    </div>
+    <div id="teacherQuestionList"><div class="empty">No questions yet</div></div>
+  </section>
+</section>
+
+<!-- ============ TEACHER: QUIZZES ============ -->
+<section id="t_quizzesTab" class="hidden">
+  <section class="card">
+    <div class="topline"><h2 style="margin:0">Quizzes</h2>
+      <button class="btn secondary" onclick="openCreateQuizModal()">➕ Create Quiz</button></div>
+    <div id="teacherQuizList"><div class="empty">No quizzes yet</div></div>
+  </section>
+</section>
+
+<!-- ============ TEACHER: ANNOUNCEMENTS ============ -->
+<section id="t_announcementsTab" class="hidden">
+  <section class="card">
+    <div class="topline"><h2 style="margin:0">Announcements</h2>
+      <button class="btn secondary" onclick="openModal('addAnnouncementModal')">➕ New</button></div>
+    <div id="teacherAnnList"><div class="empty">No announcements yet</div></div>
+  </section>
+</section>
+
+<!-- ============ TEACHER: POLLS ============ -->
+<section id="t_pollsTab" class="hidden">
+  <section class="card">
+    <div class="topline"><h2 style="margin:0">Polls</h2>
+      <button class="btn secondary" onclick="openModal('addPollModal')">➕ New</button></div>
+    <div id="teacherPollList"><div class="empty">No polls yet</div></div>
+  </section>
+</section>
+
+<!-- ============ TEACHER: STUDENTS ============ -->
+<section id="t_studentsTab" class="hidden">
+  <section class="card">
+    <div class="topline"><h2 style="margin:0">Students</h2></div>
+    <input id="studentSearch" class="search" style="margin-bottom:12px" placeholder="🔎 Search students..." oninput="renderStudents()">
+    <div style="overflow-x:auto"><table id="studentsTable">
+      <thead><tr><th>Name</th><th>Group</th><th>Attempts</th><th>Accuracy</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="studentsBody"></tbody>
+    </table></div>
+  </section>
+</section>
+
+<!-- ============ TEACHER: TIMETABLE ============ -->
+<section id="t_timetableTab" class="hidden">
+  <section class="card">
+    <div class="topline"><h2 style="margin:0">Timetable</h2>
+      <button class="btn secondary" onclick="openModal('addEventModal')">➕ New Event</button></div>
+    <div id="teacherTimetableList"><div class="empty">No events yet</div></div>
+  </section>
+</section>
+
+<!-- ============ STUDENT: HOME ============ -->
+<section id="s_homeTab" class="hidden">
+  <section class="hero"><h2 id="greetLine">Welcome back!</h2><p style="margin:0;opacity:.85">Here's your day.</p></section>
+  <section class="stats">
+    <div class="stat"><span class="muted">Study today</span><b id="statToday">0m</b></div>
+    <div class="stat"><span class="muted">Questions solved</span><b id="statQ">0</b></div>
+    <div class="stat"><span class="muted">Accuracy</span><b id="statAcc">0%</b></div>
+    <div class="stat"><span class="muted">🔥 Streak</span><b id="statStreak">0 days</b></div>
+  </section>
+  <section class="card"><h3 style="margin-top:0">Announcements</h3><div id="s_annFeed"><div class="empty">Nothing yet</div></div></section>
+  <section class="card"><h3 style="margin-top:0">Today's Timetable</h3><div id="s_todaySchedule"><div class="empty">Nothing scheduled</div></div></section>
+  <section class="card"><h3 style="margin-top:0">Revision Due</h3><div id="s_revisionDue"><div class="empty">Nothing due</div></div></section>
+</section>
+
+<!-- ============ STUDENT: DOCUMENTS ============ -->
+<section id="s_documentsTab" class="hidden">
+  <section class="card">
+    <h2 style="margin-top:0">Documents</h2>
+    <div class="toolbar">
+      <select id="sdFilterSubject" class="search" style="flex:0" onchange="renderStudentDocs()"><option value="">All Subjects</option></select>
+      <input id="sdSearch" class="search" placeholder="🔎 Search..." oninput="renderStudentDocs()">
+    </div>
+    <div id="studentDocList"><div class="empty">No documents available</div></div>
+  </section>
+</section>
+
+<!-- ============ STUDENT: PRACTICE (PYQ) ============ -->
+<section id="s_practiceTab" class="hidden">
+  <section class="card">
+    <h2 style="margin-top:0">PYQ / Practice</h2>
+    <div class="toolbar">
+      <select id="spFilterSubject" class="search" style="flex:0" onchange="renderStudentQuestions()"><option value="">All Subjects</option></select>
+      <select id="spFilterDiff" class="search" style="flex:0" onchange="renderStudentQuestions()">
+        <option value="">All Difficulty</option><option>Easy</option><option>Medium</option><option>Hard</option></select>
+      <input id="spSearch" class="search" placeholder="🔎 Search..." oninput="renderStudentQuestions()">
+    </div>
+    <div id="studentQuestionList"><div class="empty">No questions yet</div></div>
+  </section>
+</section>
+
+<!-- ============ STUDENT: QUIZZES ============ -->
+<section id="s_quizzesTab" class="hidden">
+  <section class="card"><h2 style="margin-top:0">Quizzes</h2><div id="studentQuizList"><div class="empty">No quizzes yet</div></div></section>
+</section>
+
+<!-- ============ STUDENT: ANNOUNCEMENTS ============ -->
+<section id="s_announcementsTab" class="hidden">
+  <section class="card"><h2 style="margin-top:0">Announcements</h2><div id="s_annList"><div class="empty">Nothing yet</div></div></section>
+</section>
+
+<!-- ============ STUDENT: POLLS ============ -->
+<section id="s_pollsTab" class="hidden">
+  <section class="card"><h2 style="margin-top:0">Polls</h2><div id="s_pollList"><div class="empty">No polls yet</div></div></section>
+</section>
+
+<!-- ============ STUDENT: TIMETABLE ============ -->
+<section id="s_timetableTab" class="hidden">
+  <section class="card"><h2 style="margin-top:0">Timetable</h2><div id="s_timetableList"><div class="empty">Nothing scheduled</div></div></section>
+</section>
+
+<!-- ============ STUDENT: TIMER ============ -->
+<section id="s_timerTab" class="hidden">
+  <section class="card" style="text-align:center">
+    <h2 style="margin-top:0">Study Timer</h2>
+    <div class="row" style="max-width:320px;margin:0 auto;text-align:left">
+      <label>Mode</label>
+      <select id="timerMode" class="field" onchange="setTimerMode(this.value)">
+        <option value="stopwatch">Stopwatch</option><option value="pomodoro">Pomodoro (25 min)</option></select>
+      <label style="margin-top:10px;display:block">Subject</label><select id="timerSubject" class="field"></select>
+    </div>
+    <div class="timer-display" id="timerDisplay">00:00:00</div>
+    <div class="actions" style="justify-content:center">
+      <button class="btn success" id="timerStartBtn" onclick="timerStart()">▶ Start</button>
+      <button class="btn secondary hidden" id="timerPauseBtn" onclick="timerPause()">⏸ Pause</button>
+      <button class="btn danger hidden" id="timerStopBtn" onclick="timerStop()">⏹ Stop & Save</button>
+    </div>
+  </section>
+  <section class="card"><h3 style="margin-top:0">Recent Sessions</h3><div id="sessionList"><div class="empty">No sessions yet</div></div></section>
+</section>
+
+<!-- ============ STUDENT: MISTAKES ============ -->
+<section id="s_mistakesTab" class="hidden">
+  <section class="card"><h2 style="margin-top:0">Mistake Book</h2><div id="mistakeList"><div class="empty">No mistakes saved</div></div></section>
+</section>
+
+<!-- ============ STUDENT: BOOKMARKS ============ -->
+<section id="s_bookmarksTab" class="hidden">
+  <section class="card"><h2 style="margin-top:0">Bookmarks</h2><div id="bookmarkList"><div class="empty">Nothing bookmarked yet</div></div></section>
+</section>
+
+</main>
+
+<nav class="bottom-nav" id="bottomNav"><div class="bottom-nav-inner" id="bottomNavInner"></div></nav>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<div id="uploadDocModal" class="modal"><div class="modal-content">
+  <button class="close-btn" onclick="closeModal('uploadDocModal')">✕</button>
+  <h2 style="margin-top:0">Upload Document</h2>
+  <label>Title</label><input id="docTitle" class="field">
+  <label style="margin-top:8px;display:block">Description</label><textarea id="docDesc" class="field"></textarea>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <div style="flex:1"><label>Type</label><select id="docType" class="field">
+      <option value="pdf">PDF</option><option value="notes">Notes</option><option value="pyq">PYQ</option>
+      <option value="book">Book</option><option value="solution">Solution</option><option value="other">Other</option></select></div>
+    <div style="flex:1"><label>Subject</label><select id="docSubject" class="field"></select></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <div style="flex:1"><label>Storage</label><input id="docProvider" class="field" value="Supabase Storage" disabled></div>
+    <div style="flex:1"><label>Target Group</label><input id="docGroup" class="field" value="All"></div>
+  </div>
+  <label style="margin-top:8px;display:block">File</label><input id="docFile" class="field" type="file">
+  <div id="docUploadProgress" class="hidden" style="margin-top:8px"><div class="progress"><div id="docProgressBar"></div></div></div>
+  <button class="btn" style="width:100%;margin-top:14px" onclick="uploadDocument()">Upload</button>
+</div></div>
+
+<div id="addQuestionModal" class="modal"><div class="modal-content" style="max-width:560px">
+  <button class="close-btn" onclick="closeModal('addQuestionModal')">✕</button>
+  <h2 style="margin-top:0">Add Question</h2>
+  <label>Subject</label><select id="qSubject" class="field"></select>
+  <label style="margin-top:8px;display:block">Chapter</label><select id="qChapter" class="field"></select>
+  <label style="margin-top:8px;display:block">Question</label><textarea id="qText" class="field"></textarea>
+  <label style="margin-top:8px;display:block">Option A</label><input id="qA" class="field">
+  <label style="margin-top:8px;display:block">Option B</label><input id="qB" class="field">
+  <label style="margin-top:8px;display:block">Option C</label><input id="qC" class="field">
+  <label style="margin-top:8px;display:block">Option D</label><input id="qD" class="field">
+  <label style="margin-top:8px;display:block">Correct Option</label>
+  <select id="qCorrect" class="field"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+  <label style="margin-top:8px;display:block">Explanation</label><textarea id="qSolution" class="field"></textarea>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <div style="flex:1"><label>Difficulty</label><select id="qDifficulty" class="field"><option>Easy</option><option>Medium</option><option>Hard</option></select></div>
+    <div style="flex:1"><label>Exam</label><select id="qExam" class="field"><option>JEE Main</option><option>JEE Advanced</option><option>Custom</option></select></div>
+    <div style="flex:1"><label>Year</label><input id="qYear" class="field" type="number" placeholder="2024"></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <div style="flex:1"><label>Marks</label><input id="qMarks" class="field" type="number" value="4"></div>
+    <div style="flex:1"><label>Negative</label><input id="qNeg" class="field" type="number" value="1" step="0.25"></div>
+  </div>
+  <button class="btn" style="width:100%;margin-top:14px" onclick="addQuestion()">Save Question</button>
+</div></div>
+
+<div id="solveModal" class="modal"><div class="modal-content" style="max-width:560px">
+  <button class="close-btn" onclick="closeModal('solveModal')">✕</button>
+  <div id="solveContent"></div>
+</div></div>
+
+<div id="createQuizModal" class="modal"><div class="modal-content" style="max-width:600px">
+  <button class="close-btn" onclick="closeModal('createQuizModal')">✕</button>
+  <h2 style="margin-top:0">Create Quiz</h2>
+  <label>Title</label><input id="quizTitle" class="field">
+  <label style="margin-top:8px;display:block">Instructions</label><textarea id="quizInstructions" class="field"></textarea>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <div style="flex:1"><label>Duration (min)</label><input id="quizDuration" class="field" type="number" value="30"></div>
+    <div style="flex:1"><label>Negative Marking</label><input id="quizNeg" class="field" type="number" value="0.25" step="0.25"></div>
+    <div style="flex:1"><label>Target Group</label><input id="quizGroup" class="field" value="All"></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <div style="flex:1"><label>Start</label><input id="quizStart" class="field" type="datetime-local"></div>
+    <div style="flex:1"><label>End</label><input id="quizEnd" class="field" type="datetime-local"></div>
+  </div>
+  <label style="margin-top:8px;display:block">Add Questions</label>
+  <select id="quizQuestionPicker" class="field"></select>
+  <button class="btn secondary sm" style="margin-top:6px" onclick="addQuestionToQuizDraft()">+ Add to Quiz</button>
+  <div id="quizDraftList" style="margin-top:10px"></div>
+  <button class="btn" style="width:100%;margin-top:14px" onclick="saveQuiz()">Save Quiz (unpublished)</button>
+</div></div>
+
+<div id="takeQuizModal" class="modal"><div class="modal-content" style="max-width:600px">
+  <button class="close-btn" onclick="closeModal('takeQuizModal')">✕</button>
+  <div id="takeQuizContent"></div>
+</div></div>
+
+<div id="addAnnouncementModal" class="modal"><div class="modal-content">
+  <button class="close-btn" onclick="closeModal('addAnnouncementModal')">✕</button>
+  <h2 style="margin-top:0">New Announcement</h2>
+  <label>Title</label><input id="annTitle" class="field">
+  <label style="margin-top:8px;display:block">Body</label><textarea id="annBody" class="field"></textarea>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <div style="flex:1"><label>Priority</label><select id="annPriority" class="field"><option value="normal">Normal</option><option value="important">Important</option><option value="urgent">Urgent</option></select></div>
+    <div style="flex:1"><label>Target Group</label><input id="annGroup" class="field" value="All"></div>
+  </div>
+  <label style="margin-top:8px;display:block">Expires (optional)</label><input id="annExpiry" class="field" type="datetime-local">
+  <button class="btn" style="width:100%;margin-top:14px" onclick="addAnnouncement()">Publish</button>
+</div></div>
+
+<div id="addPollModal" class="modal"><div class="modal-content">
+  <button class="close-btn" onclick="closeModal('addPollModal')">✕</button>
+  <h2 style="margin-top:0">New Poll</h2>
+  <label>Question</label><input id="pollQuestion" class="field">
+  <label style="margin-top:8px;display:block">Options (comma separated)</label><input id="pollOptions" class="field" placeholder="Option 1, Option 2, Option 3">
+  <div class="row"><label><input type="checkbox" id="pollMulti"> Allow multiple selection</label></div>
+  <div class="row"><label><input type="checkbox" id="pollAnon" checked> Anonymous voting</label></div>
+  <div class="row"><label><input type="checkbox" id="pollChange" checked> Allow changing vote</label></div>
+  <label>Target Group</label><input id="pollGroup" class="field" value="All">
+  <label style="margin-top:8px;display:block">Ends (optional)</label><input id="pollEnd" class="field" type="datetime-local">
+  <button class="btn" style="width:100%;margin-top:14px" onclick="addPoll()">Create Poll</button>
+</div></div>
+
+<div id="addEventModal" class="modal"><div class="modal-content">
+  <button class="close-btn" onclick="closeModal('addEventModal')">✕</button>
+  <h2 style="margin-top:0">New Timetable Event</h2>
+  <label>Title</label><input id="evTitle" class="field">
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <div style="flex:1"><label>Type</label><select id="evType" class="field">
+      <option value="lecture">Lecture</option><option value="test">Test</option><option value="quiz">Quiz</option>
+      <option value="revision">Revision</option><option value="break">Break</option><option value="assignment">Assignment</option><option value="event">Event</option></select></div>
+    <div style="flex:1"><label>Subject</label><select id="evSubject" class="field"></select></div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <div style="flex:1"><label>Start</label><input id="evStart" class="field" type="datetime-local"></div>
+    <div style="flex:1"><label>End</label><input id="evEnd" class="field" type="datetime-local"></div>
+  </div>
+  <label style="margin-top:8px;display:block">Description</label><textarea id="evDesc" class="field"></textarea>
+  <label style="margin-top:8px;display:block">Target Group</label><input id="evGroup" class="field" value="All">
+  <button class="btn" style="width:100%;margin-top:14px" onclick="addEvent()">Save Event</button>
+</div></div>
+
+<div id="addSubjectModal" class="modal"><div class="modal-content">
+  <button class="close-btn" onclick="closeModal('addSubjectModal')">✕</button>
+  <h2 style="margin-top:0">Add Subject</h2>
+  <input id="newSubjectName" class="field" placeholder="e.g. Physics">
+  <button class="btn" style="width:100%;margin-top:14px" onclick="addSubject()">Add</button>
+</div></div>
+
+<div id="studentAnalyticsModal" class="modal"><div class="modal-content" style="max-width:760px">
+  <button class="close-btn" onclick="closeModal('studentAnalyticsModal')">✕</button>
+  <div id="studentAnalyticsContent"></div>
+</div></div>
+
+<div id="mistakeTypeModal" class="modal"><div class="modal-content">
+  <button class="close-btn" onclick="closeModal('mistakeTypeModal')">✕</button>
+  <h2 style="margin-top:0">Add to Mistake Book</h2>
+  <label>Mistake Type</label>
+  <select id="mistakeType" class="field">
+    <option value="conceptual">Conceptual</option><option value="calculation">Calculation</option>
+    <option value="formula">Formula</option><option value="reading">Reading</option>
+    <option value="silly">Silly mistake</option><option value="time_management">Time management</option>
+    <option value="guessing">Guessing</option></select>
+  <label style="margin-top:8px;display:block">Note (optional)</label><textarea id="mistakeNote" class="field"></textarea>
+  <button class="btn" style="width:100%;margin-top:14px" onclick="saveMistake()">Save</button>
+</div></div>
+
+<script>
+/* ================= CONFIG ================= */
+const SUPABASE_URL='https://tlmbphmgqwdginizbkcn.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY='sb_publishable_Z1dhXFz-kX83Q7OktwUC3w_yB5-elDb';
+const DOCS_BUCKET='documents'; // create this bucket (private) in Supabase Storage once
+
+/* ================= INIT SUPABASE ================= */
+const {createClient}=supabase;
+const IS_TEACHER_PANEL = location.pathname.toLowerCase().endsWith('teacher-admin.html');
+const TEACHER_PANEL_FILE = 'teacher-admin.html';
+const client=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
+  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+});
+
+const $=id=>document.getElementById(id);
+function safe(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+/* ================= SUPABASE STORAGE ================= */
+const storageService={
+  async uploadFile(file,path,onProgress){
+    if(!file)throw new Error('No file selected');
+    if(onProgress)onProgress(5);
+    const {error}=await client.storage.from(DOCS_BUCKET).upload(path,file,{
+      cacheControl:'3600',upsert:false,contentType:file.type||'application/octet-stream'
+    });
+    if(error)throw error;
+    if(onProgress)onProgress(100);
+  },
+  async getFileUrl(path){
+    const {data,error}=await client.storage.from(DOCS_BUCKET).createSignedUrl(path,3600);
+    if(error)throw error;
+    return data.signedUrl;
+  },
+  async deleteFile(path){
+    const {error}=await client.storage.from(DOCS_BUCKET).remove([path]);
+    if(error)throw error;
+  }
+};
+
+/* ================= STATE ================= */
+let mode='login',currentUser=null,profile=null;
+let subjects=[],chapters=[],documents=[],questions=[],attempts=[];
+let quizzes=[],quizQuestionsCache={},quizAttempts=[];
+let announcements=[],polls=[],pollVotes=[],timetable=[],sessions=[],mistakes=[],bookmarks=[],studentsCache=[];
+let streak=null;
+let quizDraft=[]; // {question_id, marks}
+let currentDocProgress=0;
+
+/* ================= AUTH ================= */
+function showLogin(){
+  const login=$('loginView'), boot=$('bootScreen'), app=$('appView');
+  if(app)app.classList.add('hidden');
+  if(boot)boot.style.display='none';
+  if(login)login.classList.remove('hidden');
+  const email=$('singleLoginEmail'); if(email)email.focus();
+}
+async function logout(){
+  try{ await client.auth.signOut(); }
+  catch(e){ console.error('Logout error:',e); }
+  finally{
+    currentUser=null; profile=null;
+    showLogin();
+    showLoginTab('login');
+    showLoginMessage('You have been logged out safely.','ok');
+  }
+}
+function bootStatus(text){const el=$('bootMessage');if(el)el.textContent=text;}
+function bootFailure(error){
+  console.error('SUJANGIRI dashboard startup error:',error);
+  const screen=$('bootScreen'),err=$('bootError'),txt=$('bootErrorText');
+  if(screen)screen.style.display='grid';
+  if(err)err.classList.remove('hidden');
+  const raw=String(error?.message||error||'Unknown startup error');
+  let friendly='The application could not finish loading. Please retry.';
+  const low=raw.toLowerCase();
+  if(low.includes('profiles') && (low.includes('permission')||low.includes('row-level')||low.includes('rls')||low.includes('policy'))){
+    friendly='Your login is valid, but SUJANGIRI cannot read your profile. Check the profiles SELECT RLS policy and make sure profiles.id matches the Auth user ID.';
+  }else if(low.includes('profiles') && low.includes('could not be loaded')){
+    friendly='Your Auth account exists, but its profiles record is missing. Create the profile automatically with the supplied database trigger/SQL.';
+  }else if(low.includes('relation') && low.includes('does not exist')){
+    friendly='A required Supabase table is missing. Check the supplied SUJANGIRI database SQL.';
+  }else if(low.includes('network')||low.includes('fetch')){
+    friendly='Supabase could not be reached. Check your internet connection and Supabase project status.';
+  }
+  if(txt)txt.innerHTML=safe(friendly)+`<div class=\"meta\" style=\"margin-top:8px\">${safe(raw.slice(0,300))}</div>`;
+  $('appView')?.classList.add('hidden');
+}
+function reportNonFatal(context,error){console.error(context,error);}
+async function showApp(session){
+  if(booting)return; booting=true;
+  try{
+    $('loginView')?.classList.add('hidden');
+    $('bootScreen')?.style.setProperty('display','grid');
+    if(!session?.user)throw new Error('No authenticated session');
+    currentUser=session.user;
+    bootStatus('Loading your profile…');
+    profile=await fetchProfileWithRetry();
+    if(!profile)throw new Error('Profile could not be loaded. Check the profiles RLS policies.');
+    if(profile.blocked){await client.auth.signOut();throw new Error('Your account has been blocked by the teacher/admin.');}
+    if(!IS_TEACHER_PANEL && profile.role==='teacher_admin'){
+      window.location.replace(TEACHER_PANEL_FILE);
+      return;
+    }
+    $('headerEmail').textContent=currentUser.email||'';
+    $('roleBadge').textContent=profile.role==='teacher_admin'?'Teacher / Admin':'Student';
+    $('roleBadge').className='role-badge'+(profile.role==='teacher_admin'?' teacher':'');
+    buildSidebar();
+    bootStatus('Loading study data…');
+    await loadCommonData();
+    if(profile.role==='teacher_admin'){await loadTeacherData();switchTab('t_overview');}
+    else{await loadStudentData();const h=new Date().getHours();$('greetLine').textContent=(h<12?'Good morning':h<17?'Good afternoon':'Good evening')+', '+(profile.full_name||'there')+' 👋';switchTab('s_home');}
+    $('appView').classList.remove('hidden'); $('bootScreen').style.display='none';
+  }catch(error){bootFailure(error);}
+  finally{booting=false;}
+}
+async function fetchProfileWithRetry(){
+  let lastError=null;
+  for(let i=0;i<4;i++){
+    try{
+      const {data,error}=await client.from('profiles').select('id,email,full_name,role,blocked,group_name').eq('id',currentUser.id).maybeSingle();
+      if(error){lastError=error;throw error;}
+      if(data)return data;
+    }catch(e){lastError=e;reportNonFatal('Profile lookup attempt '+(i+1),e);}
+    await new Promise(r=>setTimeout(r,400));
+  }
+  const name=(currentUser.user_metadata?.full_name||currentUser.email?.split('@')[0]||'Student').trim();
+  try{
+    const {data,error}=await client.from('profiles').upsert(
+      {id:currentUser.id,full_name:name,email:currentUser.email,role:'student',blocked:false},
+      {onConflict:'id'}
+    ).select('id,email,full_name,role,blocked,group_name').single();
+    if(error)throw error;
+    if(data)return data;
+  }catch(e){
+    console.error('Profile bootstrap failed:',e);
+    lastError=e;
+  }
+  throw new Error(lastError?.message||'Profile could not be loaded.');
+}
+
+/* ================= SIDEBAR / NAV ================= */
+const TEACHER_NAV=[
+  ['t_overview','📊','Overview'],['t_documents','📄','Documents'],['t_pyq','📝','PYQ Bank'],
+  ['t_quizzes','🧪','Quizzes'],['t_announcements','📢','Announcements'],['t_polls','📊','Polls'],
+  ['t_students','👥','Students'],['t_timetable','🗓️','Timetable']
+];
+const STUDENT_NAV=[
+  ['s_home','🏠','Home'],['s_documents','📄','Documents'],['s_practice','📝','Practice'],
+  ['s_quizzes','🧪','Quizzes'],['s_announcements','📢','Announcements'],['s_polls','📊','Polls'],
+  ['s_timetable','🗓️','Timetable'],['s_timer','⏱️','Timer'],['s_mistakes','❌','Mistakes'],['s_bookmarks','⭐','Bookmarks']
+];
+function buildSidebar(){
+  const nav=profile.role==='teacher_admin'?TEACHER_NAV:STUDENT_NAV;
+  $('sidebar').innerHTML=nav.map(([id,icon,label],i)=>
+    `<div class="sidebar-item${i===0?' active':''}" data-tab="${id}" onclick="switchTab('${id}',this)">${icon} ${label}</div>`).join('');
+  $('bottomNavInner').innerHTML=nav.slice(0,5).map(([id,icon,label],i)=>
+    `<button class="bottom-nav-item${i===0?' active':''}" data-tab="${id}" onclick="switchTab('${id}',this)"><span>${icon}</span>${label}</button>`).join('');
+}
+function switchTab(tab){
+  document.querySelectorAll('[id$="Tab"]').forEach(s=>s.classList.add('hidden'));
+  const el=$(tab+'Tab'); if(el)el.classList.remove('hidden');
+  document.querySelectorAll('.sidebar-item,.bottom-nav-item').forEach(i=>i.classList.remove('active'));
+  document.querySelectorAll(`[data-tab="${tab}"]`).forEach(i=>i.classList.add('active'));
+  closeSidebar();
+  const renderers={
+    t_overview:renderOverview,t_documents:renderTeacherDocs,t_pyq:renderTeacherQuestions,
+    t_quizzes:renderTeacherQuizzes,t_announcements:renderTeacherAnnouncements,t_polls:renderTeacherPolls,
+    t_students:renderStudents,t_timetable:renderTeacherTimetable,
+    s_home:renderStudentHome,s_documents:renderStudentDocs,s_practice:renderStudentQuestions,
+    s_quizzes:renderStudentQuizzes,s_announcements:renderStudentAnnouncements,s_polls:renderStudentPolls,
+    s_timetable:renderStudentTimetable,s_timer:renderSessions,s_mistakes:renderMistakes,s_bookmarks:renderBookmarks
+  };
+  if(renderers[tab]){
+    try{
+      const result=renderers[tab]();
+      if(result&&typeof result.catch==='function')result.catch(e=>{console.error('Tab renderer failed:',e);showTabError(tab,e);});
+    }catch(e){console.error('Tab renderer failed:',e);showTabError(tab,e);}
+  }
+}
+function showTabError(tab,error){
+  const el=$(tab+'Tab');
+  if(!el)return;
+  const msg=safe(String(error?.message||error||'Unable to render this section.').slice(0,220));
+  el.innerHTML=`<section class=\"card\"><h2>Unable to load this section</h2><p class=\"muted\">Please retry this section. Other parts of SUJANGIRI can continue working.</p><div class=\"msg err\">${msg}</div><button class=\"btn\" onclick=\"switchTab('${tab}')\">Retry</button></section>`;
+}
+function toggleSidebar(){$('sidebar').classList.toggle('open');$('sidebarOverlay').classList.toggle('active');}
+function closeSidebar(){$('sidebar').classList.remove('open');$('sidebarOverlay').classList.remove('active');}
+function toggleTheme(){document.documentElement.classList.toggle('dark');localStorage.setItem('theme',document.documentElement.classList.contains('dark')?'dark':'light');}
+function openModal(id){$(id).classList.add('active');}
+function closeModal(id){$(id).classList.remove('active');}
+
+/* ================= AUDIT LOG ================= */
+async function logAction(action,object_type,object_id,details){
+  try{await client.from('audit_logs').insert({admin_id:currentUser.id,action,object_type,object_id,details:details||{}});}
+  catch(e){console.error('audit log failed',e);}
+}
+
+/* ================= COMMON DATA (both roles) ================= */
+async function loadCommonData(){
+  const results=await Promise.allSettled([
+    client.from('subjects').select('*').order('name'),
+    client.from('chapters').select('*').order('name')
+  ]);
+  const s=results[0],c=results[1];
+  if(s.status==='fulfilled'&&!s.value.error)subjects=s.value.data||[];else{subjects=[];reportNonFatal('Subjects load failed',s.status==='rejected'?s.reason:s.value.error);}
+  if(c.status==='fulfilled'&&!c.value.error)chapters=c.value.data||[];else{chapters=[];reportNonFatal('Chapters load failed',c.status==='rejected'?c.reason:c.value.error);}
+  fillSubjectDropdowns();
+}
+function fillSubjectDropdowns(){
+  const opts='<option value="">Select...</option>'+subjects.map(s=>`<option value="${s.id}">${safe(s.name)}</option>`).join('');
+  ['qSubject','docSubject','evSubject','sdFilterSubject','spFilterSubject','timerSubject'].forEach(id=>{
+    if(!$(id))return;
+    const allOpt=(id==='sdFilterSubject'||id==='spFilterSubject')?'<option value="">All Subjects</option>':'<option value="">Select...</option>';
+    $(id).innerHTML=allOpt+subjects.map(s=>`<option value="${s.id}">${safe(s.name)}</option>`).join('');
+  });
+  if($('tqFilterSubject'))$('tqFilterSubject').innerHTML='<option value="">All Subjects</option>'+subjects.map(s=>`<option value="${s.id}">${safe(s.name)}</option>`).join('');
+  if($('qSubject'))$('qSubject').onchange=()=>updateChapterSelect('qSubject','qChapter');
+  updateChapterSelect('qSubject','qChapter');
+}
+function updateChapterSelect(subSelId,chapSelId){
+  const sid=$(subSelId).value;
+  const list=chapters.filter(c=>c.subject_id===sid);
+  $(chapSelId).innerHTML='<option value="">Select...</option>'+list.map(c=>`<option value="${c.id}">${safe(c.name)}</option>`).join('');
+}
+async function addSubject(){
+  const name=$('newSubjectName').value.trim();
+  if(!name)return alert('Enter a subject name');
+  const {data,error}=await client.from('subjects').insert({name}).select().single();
+  if(error)return alert(error.message);
+  subjects.push(data);closeModal('addSubjectModal');fillSubjectDropdowns();
+  await logAction('create_subject','subject',data.id,{name});
+}
+
+/* ================= TEACHER: LOAD ================= */
+async function loadTeacherData(){
+  const requests=[
+    client.from('documents').select('*').order('created_at',{ascending:false}),
+    client.from('questions').select('*').order('created_at',{ascending:false}),
+    client.from('question_attempts').select('*'),
+    client.from('quizzes').select('*').order('created_at',{ascending:false}),
+    client.from('quiz_attempts').select('*'),
+    client.from('announcements').select('*').order('created_at',{ascending:false}),
+    client.from('polls').select('*').order('created_at',{ascending:false}),
+    client.from('poll_votes').select('*'),
+    client.from('timetable').select('*').order('start_time'),
+    client.from('profiles').select('*').eq('role','student'),
+    client.from('audit_logs').select('*').order('created_at',{ascending:false}).limit(15),
+    client.from('study_sessions').select('*')
+  ];
+  const r=await Promise.allSettled(requests);
+  const val=i=>r[i].status==='fulfilled'&&!r[i].value.error?(r[i].value.data||[]):[];
+  r.forEach((x,i)=>{if(x.status==='rejected'||(x.status==='fulfilled'&&x.value.error))reportNonFatal('Teacher data request '+i,x.status==='rejected'?x.reason:x.value.error);});
+  documents=val(0);questions=val(1);attempts=val(2);quizzes=val(3);quizAttempts=val(4);
+  announcements=val(5);polls=val(6);pollVotes=val(7);timetable=val(8);studentsCache=val(9);
+  window._auditLogs=val(10);sessions=val(11);fillQuizQuestionPicker();
+}
+function renderOverview(){
+  $('ov_students').textContent=studentsCache.length;
+  $('ov_docs').textContent=documents.length;
+  $('ov_questions').textContent=questions.length;
+  $('ov_quizzes').textContent=quizzes.length;
+  $('ov_polls').textContent=polls.filter(p=>!p.closed).length;
+  $('ov_ann').textContent=announcements.length;
+  const today=new Date().toISOString().slice(0,10);
+  $('ov_attempts_today').textContent=attempts.filter(a=>a.created_at&&String(a.created_at).slice(0,10)===today).length;
+  const correct=attempts.filter(a=>a.is_correct).length;
+  $('ov_avg_score').textContent=attempts.length?Math.round(correct/attempts.length*100)+'%':'0%';
+  $('auditList').innerHTML=(window._auditLogs||[]).length?window._auditLogs.map(l=>
+    `<div class="file"><div><div class="fname">${safe(l.action)} ${l.object_type?'— '+safe(l.object_type):''}</div>
+     <div class="meta">${new Date(l.created_at).toLocaleString()}</div></div></div>`).join(''):'<div class="empty">No actions logged yet</div>';
+}
+
+/* ================= TEACHER: DOCUMENTS ================= */
+function openUploadDocModal(){
+  ['docTitle','docDesc'].forEach(id=>$(id).value='');
+  $('docFile').value='';
+  openModal('uploadDocModal');
+}
+async function uploadDocument(){
+  const file=$('docFile').files[0];
+  if(!file)return alert('Choose a file');
+  if(file.size>50*1024*1024)return alert('Maximum file size is 50 MB');
+  const title=$('docTitle').value.trim()||file.name;
+  const safeName=file.name.replace(/[^a-zA-Z0-9._() -]/g,'_');
+  const path=`${currentUser.id}/${Date.now()}_${crypto.randomUUID()}_${safeName}`;
+  $('docUploadProgress').classList.remove('hidden');
+  try{
+    await storageService.uploadFile(file,path,pct=>{$('docProgressBar').style.width=pct+'%';});
+    const payload={title,description:$('docDesc').value.trim(),subject_id:$('docSubject').value||null,
+      doc_type:$('docType').value,storage_provider:'supabase',storage_path:path,file_size:file.size,
+      visibility:'published',target_group:$('docGroup').value.trim()||'All',uploaded_by:currentUser.id};
+    const {data,error}=await client.from('documents').insert(payload).select().single();
+    if(error){try{await storageService.deleteFile(path);}catch(_){};throw error;}
+    documents.unshift(data);
+    await logAction('upload_document','document',data.id,{title});
+    closeModal('uploadDocModal');renderTeacherDocs();
+  }catch(e){alert('Upload failed: '+e.message);}
+  $('docUploadProgress').classList.add('hidden');$('docProgressBar').style.width='0%';
+}
+async function deleteDocument(id){
+  const doc=documents.find(d=>d.id===id);
+  if(!confirm('Delete "'+doc.title+'"?'))return;
+  try{await storageService.deleteFile(doc.storage_path);}catch(e){console.error(e);}
+  await client.from('documents').delete().eq('id',id);
+  documents=documents.filter(d=>d.id!==id);
+  await logAction('delete_document','document',id,{title:doc.title});
+  renderTeacherDocs();
+}
+async function toggleDocPin(id){
+  const doc=documents.find(d=>d.id===id);
+  const {data}=await client.from('documents').update({pinned:!doc.pinned}).eq('id',id).select().single();
+  Object.assign(doc,data);renderTeacherDocs();
+}
+function renderTeacherDocs(){
+  if(!documents.length){$('teacherDocList').innerHTML='<div class="empty">No documents yet</div>';return;}
+  $('teacherDocList').innerHTML=documents.map(d=>{
+    const subj=subjects.find(s=>s.id===d.subject_id);
+    return `<div class="file"><div>
+      <div class="fname">${d.pinned?'📌 ':''}${safe(d.title)} <span class="pill">${d.doc_type}</span> <span class="pill">${d.storage_provider}</span></div>
+      <div class="meta">${subj?safe(subj.name)+' • ':''}${fmt(d.file_size)} • ${new Date(d.created_at).toLocaleString()}</div></div>
+      <div><button class="btn sm secondary" onclick="toggleDocPin('${d.id}')">${d.pinned?'Unpin':'Pin'}</button>
+      <button class="btn sm danger" onclick="deleteDocument('${d.id}')">Delete</button></div></div>`;
+  }).join('');
+}
+function fmt(b){b=b||0;if(b<1024)return b+' B';if(b<1048576)return (b/1024).toFixed(1)+' KB';if(b<1073741824)return (b/1048576).toFixed(1)+' MB';return (b/1073741824).toFixed(2)+' GB';}
+
+async function renderStudentDocs(){
+  const subF=$('sdFilterSubject').value,txt=($('sdSearch').value||'').toLowerCase();
+  const {data,error}=await client.from('documents').select('*').order('created_at',{ascending:false});
+  if(error){$('studentDocList').innerHTML='<div class="empty">Unable to load documents</div>';return;}
+  const list=(data||[]).filter(d=>
+    (d.visibility==='published'||!d.visibility) &&
+    (d.target_group==='All'||!d.target_group||d.target_group===profile.group_name) &&
+    (!subF||d.subject_id===subF)&&(!txt||String(d.title||'').toLowerCase().includes(txt))
+  );
+  window._studentDocsCache=list;
+  if(!list.length){$('studentDocList').innerHTML='<div class="empty">No documents available</div>';return;}
+  $('studentDocList').innerHTML=list.map(d=>{
+    const subj=subjects.find(s=>s.id===d.subject_id);
+    const isBookmarked=bookmarks.some(b=>b.item_type==='document'&&b.item_id===d.id);
+    return `<div class="file"><div><div class="fname">${d.pinned?'📌 ':''}${safe(d.title)} <span class="pill">${safe(d.doc_type)}</span></div>
+      <div class="meta">${subj?safe(subj.name)+' • ':''}${fmt(d.file_size)}</div></div>
+      <div><button class="btn sm secondary" onclick="openDocument('${d.id}','${d.storage_path}')">Open</button>
+      <button class="btn sm ${isBookmarked?'success':'ghost'}" onclick="toggleBookmark('document','${d.id}')">⭐</button></div></div>`;
+  }).join('');
+}
+async function openDocument(id,path){
+  try{
+    const url=await storageService.getFileUrl(path);
+    window.open(url,'_blank');
+  }catch(e){alert('Could not open file: '+e.message);}
+}
+
+/* ================= TEACHER: PYQ / QUESTIONS ================= */
+function openAddQuestionModal(){
+  ['qText','qA','qB','qC','qD','qSolution','qYear'].forEach(id=>$(id).value='');
+  openModal('addQuestionModal');
+}
+async function addQuestion(){
+  const payload={
+    subject_id:$('qSubject').value||null,chapter_id:$('qChapter').value||null,
+    question_text:$('qText').value.trim(),
+    option_a:$('qA').value.trim(),option_b:$('qB').value.trim(),option_c:$('qC').value.trim(),option_d:$('qD').value.trim(),
+    correct_option:$('qCorrect').value,explanation:$('qSolution').value.trim(),
+    difficulty:$('qDifficulty').value,exam:$('qExam').value,
+    year:$('qYear').value?parseInt($('qYear').value):null,
+    marks:parseInt($('qMarks').value)||4,negative_marks:parseFloat($('qNeg').value)||1,
+    published:true,created_by:currentUser.id
+  };
+  if(!payload.question_text)return alert('Enter question text');
+  const {data,error}=await client.from('questions').insert(payload).select().single();
+  if(error)return alert(error.message);
+  questions.unshift(data);closeModal('addQuestionModal');renderTeacherQuestions();fillQuizQuestionPicker();
+  await logAction('create_question','question',data.id,{});
+}
+async function deleteQuestion(id){
+  if(!confirm('Delete this question?'))return;
+  await client.from('questions').delete().eq('id',id);
+  questions=questions.filter(q=>q.id!==id);renderTeacherQuestions();fillQuizQuestionPicker();
+  await logAction('delete_question','question',id,{});
+}
+async function togglePublish(id){
+  const q=questions.find(x=>x.id===id);
+  const {data}=await client.from('questions').update({published:!q.published}).eq('id',id).select().single();
+  Object.assign(q,data);renderTeacherQuestions();
+}
+function renderTeacherQuestions(){
+  const subF=$('tqFilterSubject').value,txt=($('tqSearch').value||'').toLowerCase();
+  const list=questions.filter(q=>(!subF||q.subject_id===subF)&&(!txt||q.question_text.toLowerCase().includes(txt)));
+  if(!list.length){$('teacherQuestionList').innerHTML='<div class="empty">No matching questions</div>';return;}
+  $('teacherQuestionList').innerHTML=list.map(q=>`<div class="q-card">
+    <div class="topline"><div><span class="pill">${q.difficulty}</span><span class="pill">${q.exam||''}</span>
+    ${q.published?'<span class="pill green">Published</span>':'<span class="pill orange">Hidden</span>'}</div>
+    <div><button class="btn sm secondary" onclick="togglePublish('${q.id}')">${q.published?'Unpublish':'Publish'}</button>
+    <button class="btn sm danger" onclick="deleteQuestion('${q.id}')">Delete</button></div></div>
+    <p style="margin:8px 0">${safe(q.question_text)}</p></div>`).join('');
+}
+
+async function renderStudentQuestions(){
+  const subF=$('spFilterSubject').value,diffF=$('spFilterDiff').value,txt=($('spSearch').value||'').toLowerCase();
+  const {data}=await client.from('questions').select('*').eq('published',true);
+  const list=(data||[]).filter(q=>(!subF||q.subject_id===subF)&&(!diffF||q.difficulty===diffF)&&(!txt||q.question_text.toLowerCase().includes(txt)));
+  window._studentQCache=list;
+  if(!list.length){$('studentQuestionList').innerHTML='<div class="empty">No matching questions</div>';return;}
+  $('studentQuestionList').innerHTML=list.map(q=>{
+    const mine=attempts.filter(a=>a.question_id===q.id);
+    const lastCorrect=mine[0]?mine[0].is_correct:null;
+    const subj=subjects.find(s=>s.id===q.subject_id);
+    const isBookmarked=bookmarks.some(b=>b.item_type==='question'&&b.item_id===q.id);
+    return `<div class="q-card">
+      <div class="topline"><div><span class="pill">${q.difficulty}</span>${subj?`<span class="pill">${safe(subj.name)}</span>`:''}
+      ${lastCorrect===true?'<span class="pill green">Solved ✓</span>':lastCorrect===false?'<span class="pill red">Retry</span>':''}</div>
+      <button class="btn sm ${isBookmarked?'success':'ghost'}" onclick="toggleBookmark('question','${q.id}')">⭐</button></div>
+      <p style="margin:10px 0">${safe(q.question_text)}</p>
+      <button class="btn secondary sm" onclick="openSolve('${q.id}')">Solve</button></div>`;
+  }).join('');
+}
+let solveStartTime=null,solveQ=null;
+function openSolve(id){
+  solveQ=(window._studentQCache||questions).find(q=>q.id===id);
+  solveStartTime=Date.now();
+  const opts=[['A',solveQ.option_a],['B',solveQ.option_b],['C',solveQ.option_c],['D',solveQ.option_d]];
+  $('solveContent').innerHTML=`<h3>${safe(solveQ.question_text)}</h3>
+    <div id="solveOpts">${opts.map(([k,v])=>v?`<button class="opt" onclick="submitAnswer('${k}')">${k}. ${safe(v)}</button>`:'').join('')}</div>
+    <div id="solveResult"></div>`;
+  openModal('solveModal');
+}
+async function submitAnswer(choice){
+  const isCorrect=choice===solveQ.correct_option;
+  const timeTaken=Math.round((Date.now()-solveStartTime)/1000);
+  document.querySelectorAll('#solveOpts .opt').forEach(b=>{
+    const letter=b.textContent.trim()[0];
+    if(letter===solveQ.correct_option)b.classList.add('correct');
+    if(letter===choice&&!isCorrect)b.classList.add('wrong');
+    b.disabled=true;
+  });
+  $('solveResult').innerHTML=`<div class="msg ${isCorrect?'ok':'err'}" style="margin-top:12px">
+    ${isCorrect?'✅ Correct!':'❌ Incorrect. Correct answer: '+solveQ.correct_option}
+    ${solveQ.explanation?`<div style="margin-top:8px">${safe(solveQ.explanation)}</div>`:''}
+    ${!isCorrect?`<button class="btn sm secondary" style="margin-top:8px" onclick="openMistakeModal('${solveQ.id}')">Add to Mistake Book</button>`:''}
+  </div>`;
+  const {data,error}=await client.from('question_attempts').insert({
+    user_id:currentUser.id,question_id:solveQ.id,selected_option:choice,is_correct:isCorrect,time_taken_seconds:timeTaken
+  }).select().single();
+  if(!error){attempts.unshift(data);await touchStreak();renderStudentQuestions();renderStudentHome();}
+}
+let mistakeQid=null;
+function openMistakeModal(qid){mistakeQid=qid;$('mistakeNote').value='';openModal('mistakeTypeModal');}
+async function saveMistake(){
+  const {data,error}=await client.from('mistakes').insert({
+    user_id:currentUser.id,question_id:mistakeQid,mistake_type:$('mistakeType').value,note:$('mistakeNote').value.trim()
+  }).select().single();
+  if(error)return alert(error.message);
+  mistakes.unshift(data);closeModal('mistakeTypeModal');alert('Added to Mistake Book');
+}
+
+/* ================= TEACHER: QUIZZES ================= */
+function fillQuizQuestionPicker(){
+  if(!$('quizQuestionPicker'))return;
+  $('quizQuestionPicker').innerHTML=questions.map(q=>`<option value="${q.id}">${safe(q.question_text.slice(0,60))}</option>`).join('');
+}
+function openCreateQuizModal(){
+  quizDraft=[];
+  ['quizTitle','quizInstructions'].forEach(id=>$(id).value='');
+  $('quizDuration').value=30;$('quizNeg').value=0.25;$('quizGroup').value='All';
+  renderQuizDraft();
+  openModal('createQuizModal');
+}
+function addQuestionToQuizDraft(){
+  const qid=$('quizQuestionPicker').value;
+  if(!qid||quizDraft.some(d=>d.question_id===qid))return;
+  const q=questions.find(x=>x.id===qid);
+  quizDraft.push({question_id:qid,marks:q.marks||4});
+  renderQuizDraft();
+}
+function renderQuizDraft(){
+  $('quizDraftList').innerHTML=quizDraft.length?quizDraft.map((d,i)=>{
+    const q=questions.find(x=>x.id===d.question_id);
+    return `<div class="file"><div class="fname">${safe((q?.question_text||'').slice(0,60))}</div>
+      <button class="btn sm danger" onclick="removeQuizDraft(${i})">Remove</button></div>`;
+  }).join(''):'<div class="empty">No questions added yet</div>';
+}
+function removeQuizDraft(i){quizDraft.splice(i,1);renderQuizDraft();}
+async function saveQuiz(){
+  const title=$('quizTitle').value.trim();
+  if(!title)return alert('Enter a title');
+  if(!quizDraft.length)return alert('Add at least one question');
+  const negative=Math.max(0,parseFloat($('quizNeg').value)||0);
+  const duration=Math.max(1,parseInt($('quizDuration').value)||30);
+  const payload={title,instructions:$('quizInstructions').value.trim(),duration_minutes:duration,
+    negative_marking:negative,target_group:$('quizGroup').value.trim()||'All',
+    start_time:$('quizStart').value||null,end_time:$('quizEnd').value||null,published:false,created_by:currentUser.id};
+  const {data:quiz,error}=await client.from('quizzes').insert(payload).select().single();
+  if(error)return alert(error.message);
+  const rows=quizDraft.map((d,i)=>({quiz_id:quiz.id,question_id:d.question_id,order_index:i,marks:Number(d.marks)||4}));
+  const {error:qErr}=await client.from('quiz_questions').insert(rows);
+  if(qErr){await client.from('quizzes').delete().eq('id',quiz.id);return alert('Could not add quiz questions: '+qErr.message);}
+  quizzes.unshift(quiz);quizAttempts=[];closeModal('createQuizModal');renderTeacherQuizzes();
+  await logAction('create_quiz','quiz',quiz.id,{title});
+} 
+async function togglePublishQuiz(id){
+  const qz=quizzes.find(q=>q.id===id);
+  const {data}=await client.from('quizzes').update({published:!qz.published}).eq('id',id).select().single();
+  Object.assign(qz,data);renderTeacherQuizzes();
+  await logAction(data.published?'publish_quiz':'unpublish_quiz','quiz',id,{});
+}
+async function deleteQuiz(id){
+  if(!confirm('Delete this quiz?'))return;
+  await client.from('quizzes').delete().eq('id',id);
+  quizzes=quizzes.filter(q=>q.id!==id);renderTeacherQuizzes();
+  await logAction('delete_quiz','quiz',id,{});
+}
+function renderTeacherQuizzes(){
+  if(!quizzes.length){$('teacherQuizList').innerHTML='<div class="empty">No quizzes yet</div>';return;}
+  $('teacherQuizList').innerHTML=quizzes.map(q=>`<div class="q-card">
+    <div class="topline"><strong>${safe(q.title)}</strong>
+    ${q.published?'<span class="pill green">Published</span>':'<span class="pill orange">Draft</span>'}</div>
+    <div class="muted">${q.duration_minutes} min • Negative: ${q.negative_marking} • Group: ${safe(q.target_group)}</div>
+    <div class="actions" style="margin-top:8px">
+      <button class="btn sm secondary" onclick="togglePublishQuiz('${q.id}')">${q.published?'Unpublish':'Publish'}</button>
+      <button class="btn sm danger" onclick="deleteQuiz('${q.id}')">Delete</button>
+    </div></div>`).join('');
+}
+
+async function renderStudentQuizzes(){
+  const {data,error}=await client.from('quizzes').select('*').eq('published',true).order('created_at',{ascending:false});
+  if(error){$('studentQuizList').innerHTML='<div class="empty">Unable to load quizzes: '+safe(error.message)+'</div>';return;}
+  const now=new Date();
+  const list=(data||[]).filter(q=>(q.target_group==='All'||q.target_group===profile.group_name));
+  const {data:mine}=await client.from('quiz_attempts').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  quizAttempts=mine||[];
+  if(!list.length){$('studentQuizList').innerHTML='<div class="empty">No quizzes available</div>';return;}
+  $('studentQuizList').innerHTML=list.map(q=>{
+    const myAttempt=quizAttempts.find(a=>a.quiz_id===q.id&&a.status==='submitted');
+    const open=(!q.start_time||new Date(q.start_time)<=now)&&(!q.end_time||new Date(q.end_time)>=now);
+    let action='';
+    if(myAttempt&&!q.allow_retest)action=`<span class="pill green">Score: ${Number(myAttempt.score||0).toFixed(2)}/${Number(myAttempt.total_marks||0).toFixed(2)}</span>`;
+    else if(!open)action=`<span class="pill orange">${q.start_time&&new Date(q.start_time)>now?'Not started':'Closed'}</span>`;
+    else action=`<button class="btn secondary sm" onclick="startQuiz('${q.id}')">${myAttempt?'Retake':'Start'} Quiz</button>`;
+    return `<div class="q-card"><div class="topline"><strong>${safe(q.title)}</strong>${action}</div><div class="muted">${safe(q.instructions||'')}</div><div class="meta" style="margin-top:6px">${q.duration_minutes} min • Negative ${q.negative_marking||0} marks/question</div></div>`;
+  }).join('');
+}
+let activeQuiz=null,activeAttemptId=null,activeQuizQuestions=[],quizTimerInterval=null,quizSecondsLeft=0;
+async function startQuiz(quizId){
+  const result=quizzes.find(q=>q.id===quizId)||null;
+  if(result)activeQuiz=result;
+  else{const {data,error}=await client.from('quizzes').select('*').eq('id',quizId).single();if(error)return alert(error.message);activeQuiz=data;}
+  const {data:qqs,error:qqErr}=await client.from('quiz_questions').select('*,questions(*)').eq('quiz_id',quizId).order('order_index');
+  if(qqErr)return alert(qqErr.message);
+  activeQuizQuestions=(qqs||[]).filter(r=>r.questions).map(r=>({...r.questions,marks:Number(r.marks)||4,qq_id:r.id}));
+  if(!activeQuizQuestions.length)return alert('This quiz has no questions. Ask the teacher to fix it.');
+  const total=activeQuizQuestions.reduce((a,q)=>a+Number(q.marks||0),0);
+  const {data:attempt,error}=await client.from('quiz_attempts').insert({quiz_id:quizId,user_id:currentUser.id,total_marks:total,status:'started'}).select().single();
+  if(error)return alert(error.message);
+  activeAttemptId=attempt.id;quizSecondsLeft=Math.max(1,Number(activeQuiz.duration_minutes)||30)*60;renderTakeQuiz();openModal('takeQuizModal');
+  clearInterval(quizTimerInterval);quizTimerInterval=setInterval(()=>{quizSecondsLeft--;const el=$('quizTimeLeft');if(el)el.textContent=formatSecs(Math.max(0,quizSecondsLeft));if(quizSecondsLeft<=0){clearInterval(quizTimerInterval);submitQuiz(true);}},1000);
+}
+function formatSecs(s){const m=Math.floor(s/60),ss=s%60;return String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0');}
+function renderTakeQuiz(){
+  $('takeQuizContent').innerHTML=`<h3>${safe(activeQuiz.title)}</h3>
+    <div class="muted">Time left: <strong id="quizTimeLeft">${formatSecs(quizSecondsLeft)}</strong></div>
+    <div id="takeQuizQs" style="margin-top:12px">${activeQuizQuestions.map((q,i)=>{
+      const opts=[['A',q.option_a],['B',q.option_b],['C',q.option_c],['D',q.option_d]];
+      return `<div class="q-card"><div class="muted">Q${i+1} • ${q.marks} marks</div>
+        <p>${safe(q.question_text)}</p>
+        ${opts.map(([k,v])=>v?`<label style="display:block;margin-top:6px">
+          <input type="radio" name="tq_${q.id}" value="${k}"> ${k}. ${safe(v)}</label>`:'').join('')}</div>`;
+    }).join('')}</div>
+    <button class="btn" style="width:100%;margin-top:14px" onclick="submitQuiz(false)">Submit Quiz</button>`;
+}
+async function submitQuiz(auto){
+  if(!activeAttemptId||!activeQuizQuestions.length)return;
+  clearInterval(quizTimerInterval);
+  if(!auto&&!confirm('Submit the quiz? You cannot change answers after this.'))return;
+  let score=0;const answerRows=[];
+  activeQuizQuestions.forEach(q=>{
+    const sel=document.querySelector(`input[name="tq_${q.id}"]:checked`);
+    const selected=sel?sel.value:null;let isCorrect=null,marksAwarded=0;
+    if(selected){isCorrect=selected===q.correct_option;marksAwarded=isCorrect?Number(q.marks||0):-Number(activeQuiz.negative_marking||0);}
+    score+=marksAwarded;answerRows.push({quiz_attempt_id:activeAttemptId,user_id:currentUser.id,question_id:q.id,selected_option:selected,is_correct:isCorrect,marks_awarded:marksAwarded});
+  });
+  const {error:aErr}=await client.from('quiz_answers').insert(answerRows);
+  if(aErr)return alert('Could not save answers: '+aErr.message);
+  const total=activeQuizQuestions.reduce((a,q)=>a+Number(q.marks||0),0);
+  const {data:updated,error:uErr}=await client.from('quiz_attempts').update({submitted_at:new Date().toISOString(),score,total_marks:total,status:'submitted'}).eq('id',activeAttemptId).select().single();
+  if(uErr)return alert('Could not submit quiz: '+uErr.message);
+  quizAttempts=[updated,...quizAttempts.filter(a=>a.id!==updated.id)];
+  activeAttemptId=null;closeModal('takeQuizModal');
+  alert(`Quiz submitted! Score: ${score.toFixed(2)}/${total.toFixed(2)}`);renderStudentQuizzes();
+}
+
+/* ================= TEACHER: ANNOUNCEMENTS ================= */
+async function addAnnouncement(){
+  const title=$('annTitle').value.trim();
+  if(!title)return alert('Enter a title');
+  const payload={title,body:$('annBody').value.trim(),priority:$('annPriority').value,
+    target_group:$('annGroup').value||'All',expiry_at:$('annExpiry').value||null,created_by:currentUser.id};
+  const {data,error}=await client.from('announcements').insert(payload).select().single();
+  if(error)return alert(error.message);
+  announcements.unshift(data);closeModal('addAnnouncementModal');renderTeacherAnnouncements();
+  await logAction('create_announcement','announcement',data.id,{title});
+}
+async function deleteAnnouncement(id){
+  if(!confirm('Delete this announcement?'))return;
+  await client.from('announcements').delete().eq('id',id);
+  announcements=announcements.filter(a=>a.id!==id);renderTeacherAnnouncements();
+}
+function renderTeacherAnnouncements(){
+  if(!announcements.length){$('teacherAnnList').innerHTML='<div class="empty">No announcements yet</div>';return;}
+  $('teacherAnnList').innerHTML=announcements.map(a=>`<div class="q-card">
+    <div class="topline"><strong>${safe(a.title)}</strong><span class="pill ${a.priority==='urgent'?'red':a.priority==='important'?'orange':''}">${a.priority}</span></div>
+    <p style="margin:8px 0">${safe(a.body||'')}</p>
+    <div class="actions"><button class="btn sm danger" onclick="deleteAnnouncement('${a.id}')">Delete</button></div></div>`).join('');
+}
+async function renderStudentAnnouncements(){
+  const {data}=await client.from('announcements').select('*').order('created_at',{ascending:false});
+  const list=(data||[]).filter(a=>a.target_group==='All'||a.target_group===profile.group_name);
+  const html=list.length?list.map(a=>`<div class="q-card">
+    <div class="topline"><strong>${safe(a.title)}</strong><span class="pill ${a.priority==='urgent'?'red':a.priority==='important'?'orange':''}">${a.priority}</span></div>
+    <p style="margin:8px 0">${safe(a.body||'')}</p><div class="meta">${new Date(a.created_at).toLocaleString()}</div></div>`).join(''):'<div class="empty">Nothing yet</div>';
+  $('s_annList').innerHTML=html;
+  $('s_annFeed').innerHTML=list.slice(0,3).length?list.slice(0,3).map(a=>`<div class="file"><div class="fname">${safe(a.title)}</div></div>`).join(''):'<div class="empty">Nothing yet</div>';
+}
+
+/* ================= TEACHER: POLLS ================= */
+async function addPoll(){
+  const question=$('pollQuestion').value.trim();
+  const opts=$('pollOptions').value.split(',').map(s=>s.trim()).filter(Boolean);
+  if(!question||opts.length<2)return alert('Enter a question and at least 2 options');
+  const payload={question,options:opts,multiple_selection:$('pollMulti').checked,anonymous:$('pollAnon').checked,
+    allow_change_vote:$('pollChange').checked,target_group:$('pollGroup').value||'All',
+    end_time:$('pollEnd').value||null,created_by:currentUser.id};
+  const {data,error}=await client.from('polls').insert(payload).select().single();
+  if(error)return alert(error.message);
+  polls.unshift(data);closeModal('addPollModal');renderTeacherPolls();
+  await logAction('create_poll','poll',data.id,{question});
+}
+async function togglePollClosed(id){
+  const p=polls.find(x=>x.id===id);
+  const {data}=await client.from('polls').update({closed:!p.closed}).eq('id',id).select().single();
+  Object.assign(p,data);renderTeacherPolls();
+}
+async function deletePoll(id){
+  if(!confirm('Delete this poll?'))return;
+  await client.from('polls').delete().eq('id',id);
+  polls=polls.filter(p=>p.id!==id);renderTeacherPolls();
+}
+async function renderTeacherPolls(){
+  if(!polls.length){$('teacherPollList').innerHTML='<div class="empty">No polls yet</div>';return;}
+  const {data:votes}=await client.from('poll_votes').select('*');
+  pollVotes=votes||[];
+  $('teacherPollList').innerHTML=polls.map(p=>{
+    const myVotes=pollVotes.filter(v=>v.poll_id===p.id);
+    const counts=p.options.map(o=>myVotes.filter(v=>(v.selected_options||[]).includes(o)).length);
+    const total=counts.reduce((a,b)=>a+b,0)||1;
+    return `<div class="q-card">
+      <div class="topline"><strong>${safe(p.question)}</strong>${p.closed?'<span class="pill red">Closed</span>':'<span class="pill green">Live</span>'}</div>
+      ${p.options.map((o,i)=>`<div class="bar-row"><div class="muted" style="font-size:13px">${safe(o)} — ${counts[i]} votes</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(counts[i]/total*100)}%"></div></div></div>`).join('')}
+      <div class="actions" style="margin-top:8px">
+        <button class="btn sm secondary" onclick="togglePollClosed('${p.id}')">${p.closed?'Reopen':'Close'}</button>
+        <button class="btn sm danger" onclick="deletePoll('${p.id}')">Delete</button>
+      </div></div>`;
+  }).join('');
+}
+async function renderStudentPolls(){
+  const {data}=await client.from('polls').select('*').order('created_at',{ascending:false});
+  const now=new Date();
+  const list=(data||[]).filter(p=>!p.closed&&(!p.end_time||new Date(p.end_time)>now)&&(p.target_group==='All'||p.target_group===profile.group_name));
+  const {data:myVotesData}=await client.from('poll_votes').select('*').eq('user_id',currentUser.id);
+  const myVotes=myVotesData||[];
+  if(!list.length){$('s_pollList').innerHTML='<div class="empty">No polls yet</div>';return;}
+  $('s_pollList').innerHTML=list.map(p=>{
+    const mine=myVotes.find(v=>v.poll_id===p.id);
+    const optsHtml=p.options.map(o=>`<label style="display:block;margin-top:6px">
+      <input type="${p.multiple_selection?'checkbox':'radio'}" name="poll_${p.id}" value="${safe(o)}" ${mine&&mine.selected_options.includes(o)?'checked':''} ${mine&&!p.allow_change_vote?'disabled':''}> ${safe(o)}</label>`).join('');
+    return `<div class="q-card"><strong>${safe(p.question)}</strong>${mine?'<span class="pill green"> Voted</span>':''}
+      <div>${optsHtml}</div>
+      ${(!mine||p.allow_change_vote)?`<button class="btn sm secondary" style="margin-top:8px" onclick="votePoll('${p.id}',${p.multiple_selection})">Submit Vote</button>`:''}
+      </div>`;
+  }).join('');
+}
+async function votePoll(pollId,multi){
+  const inputs=document.querySelectorAll(`input[name="poll_${pollId}"]:checked`);
+  const selected=[...inputs].map(i=>i.value);
+  if(!selected.length)return alert('Choose an option');
+  const {error}=await client.from('poll_votes').upsert({poll_id:pollId,user_id:currentUser.id,selected_options:selected},{onConflict:'poll_id,user_id'});
+  if(error)return alert(error.message);
+  alert('Vote recorded');renderStudentPolls();
+}
+
+/* ================= TIMETABLE ================= */
+async function addEvent(){
+  const title=$('evTitle').value.trim(),start=$('evStart').value;
+  if(!title||!start)return alert('Enter a title and start time');
+  const payload={title,event_type:$('evType').value,subject_id:$('evSubject').value||null,
+    start_time:start,end_time:$('evEnd').value||null,description:$('evDesc').value.trim(),
+    target_group:$('evGroup').value||'All',created_by:currentUser.id};
+  const {data,error}=await client.from('timetable').insert(payload).select().single();
+  if(error)return alert(error.message);
+  timetable.unshift(data);closeModal('addEventModal');renderTeacherTimetable();
+  await logAction('create_event','timetable',data.id,{title});
+}
+async function deleteEvent(id){
+  if(!confirm('Delete this event?'))return;
+  await client.from('timetable').delete().eq('id',id);
+  timetable=timetable.filter(t=>t.id!==id);renderTeacherTimetable();
+}
+function renderTeacherTimetable(){
+  const sorted=[...timetable].sort((a,b)=>new Date(a.start_time)-new Date(b.start_time));
+  $('teacherTimetableList').innerHTML=sorted.length?sorted.map(t=>`<div class="file">
+    <div><div class="fname">${safe(t.title)} <span class="pill">${t.event_type}</span></div>
+    <div class="meta">${new Date(t.start_time).toLocaleString()}</div></div>
+    <button class="btn sm danger" onclick="deleteEvent('${t.id}')">Delete</button></div>`).join(''):'<div class="empty">No events yet</div>';
+}
+async function renderStudentTimetable(){
+  const {data}=await client.from('timetable').select('*').order('start_time');
+  const list=(data||[]).filter(t=>t.target_group==='All'||t.target_group===profile.group_name);
+  $('s_timetableList').innerHTML=list.length?list.map(t=>`<div class="file"><div>
+    <div class="fname">${safe(t.title)} <span class="pill">${t.event_type}</span></div>
+    <div class="meta">${new Date(t.start_time).toLocaleString()}</div></div></div>`).join(''):'<div class="empty">Nothing scheduled</div>';
+  const today=new Date().toDateString();
+  const todayList=list.filter(t=>new Date(t.start_time).toDateString()===today);
+  $('s_todaySchedule').innerHTML=todayList.length?todayList.map(t=>`<div class="file"><div class="fname">${safe(t.title)}</div>
+    <div class="meta">${new Date(t.start_time).toLocaleTimeString()}</div></div>`).join(''):'<div class="empty">Nothing scheduled</div>';
+}
+
+/* ================= STUDENTS (teacher view) ================= */
+async function renderStudents(){
+  const txt=($('studentSearch').value||'').toLowerCase();
+  const list=studentsCache.filter(s=>!txt||(s.full_name||'').toLowerCase().includes(txt)||(s.email||'').toLowerCase().includes(txt));
+  const attemptByUser={};attempts.forEach(a=>(attemptByUser[a.user_id]??=[]).push(a));
+  const quizByUser={};quizAttempts.forEach(a=>(quizByUser[a.user_id]??=[]).push(a));
+  $('studentsBody').innerHTML=list.map(s=>{
+    const mine=attemptByUser[s.id]||[];const correct=mine.filter(a=>a.is_correct).length;
+    const acc=mine.length?Math.round(correct/mine.length*100)+'%':'—';
+    const qmine=(quizByUser[s.id]||[]).filter(a=>a.status==='submitted');
+    const qavg=qmine.length?Math.round(qmine.reduce((x,a)=>x+(Number(a.score||0)/Math.max(1,Number(a.total_marks||1))*100),0)/qmine.length)+'%':'—';
+    return `<tr><td>${safe(s.full_name||s.email)}</td><td>${safe(s.group_name||'All')}</td><td>${mine.length}</td><td>${acc}</td>
+      <td>${s.blocked?'<span class="pill red">Blocked</span>':'<span class="pill green">Active</span>'}<br><small class="muted">Quiz avg: ${qavg}</small></td>
+      <td><button class="btn sm secondary" onclick="viewStudentAnalytics('${s.id}')">Analytics</button>
+      <button class="btn sm ${s.blocked?'success':'danger'}" onclick="toggleBlock('${s.id}')">${s.blocked?'Unblock':'Block'}</button>
+      <button class="btn sm ghost" onclick="changeGroup('${s.id}')">Group</button></td></tr>`;
+  }).join('')||'<tr><td colspan="6" class="empty">No students found</td></tr>';
+}
+async function viewStudentAnalytics(id){
+  const student=studentsCache.find(s=>s.id===id);if(!student)return;
+  const qa=(attempts||[]).filter(a=>a.user_id===id);
+  const qz=(quizAttempts||[]).filter(a=>a.user_id===id&&a.status==='submitted');
+  const pv=(pollVotes||[]).filter(v=>v.user_id===id);
+  const ss=(sessions||[]).filter(x=>x.user_id===id);
+  const accuracy=qa.length?Math.round(qa.filter(a=>a.is_correct).length/qa.length*100):0;
+  const quizAvg=qz.length?Math.round(qz.reduce((x,a)=>x+(Number(a.score||0)/Math.max(1,Number(a.total_marks||1))*100),0)/qz.length):0;
+  $('studentAnalyticsContent').innerHTML=`<h2>${safe(student.full_name||student.email)}</h2>
+    <p class="muted">${safe(student.email)} • Group: ${safe(student.group_name||'All')}</p>
+    <div class="stats"><div class="stat"><span>Practice attempts</span><b>${qa.length}</b></div><div class="stat"><span>Accuracy</span><b>${accuracy}%</b></div><div class="stat"><span>Quizzes</span><b>${qz.length}</b></div><div class="stat"><span>Quiz average</span><b>${quizAvg}%</b></div></div>
+    <div class="card"><h3>Activity</h3><p>Polls answered: <b>${pv.length}</b></p><p>Study sessions: <b>${ss.length}</b></p><p>Total study time: <b>${ss.reduce((x,a)=>x+Number(a.duration_minutes||0),0)} min</b></p></div>
+    <div class="card"><h3>Quiz / DPP results</h3>${qz.length?qz.map(a=>`<div class="file"><div><b>${safe((quizzes.find(q=>q.id===a.quiz_id)||{}).title||'Quiz')}</b><div class="meta">${new Date(a.submitted_at||a.created_at).toLocaleString()}</div></div><strong>${Number(a.score||0).toFixed(2)}/${Number(a.total_marks||0).toFixed(2)}</strong></div>`).join(''):'<div class="empty">No submitted quizzes yet</div>'}</div>
+    <div class="card"><h3>Recent practice attempts</h3>${qa.slice(0,20).map(a=>{const q=questions.find(x=>x.id===a.question_id);return `<div class="file"><div>${safe(q?.question_text?.slice(0,70)||a.question_id)}<div class="meta">${new Date(a.created_at).toLocaleString()}</div></div><span class="pill ${a.is_correct?'green':'red'}">${a.is_correct?'Correct':'Wrong'}</span></div>`}).join('')||'<div class="empty">No attempts</div>'}</div>`;
+  openModal('studentAnalyticsModal');
+}
+async function toggleBlock(id){
+  const s=studentsCache.find(x=>x.id===id);
+  const {data,error}=await client.from('profiles').update({blocked:!s.blocked}).eq('id',id).select().single();
+  if(error)return alert(error.message);
+  Object.assign(s,data);renderStudents();
+  await logAction(data.blocked?'block_student':'unblock_student','profile',id,{});
+}
+async function changeGroup(id){
+  const s=studentsCache.find(x=>x.id===id);
+  const g=prompt('New group name:',s.group_name);
+  if(!g)return;
+  const {data,error}=await client.from('profiles').update({group_name:g}).eq('id',id).select().single();
+  if(error)return alert(error.message);
+  Object.assign(s,data);renderStudents();
+  await logAction('change_group','profile',id,{group:g});
+}
+
+/* ================= STUDENT: LOAD + HOME ================= */
+async function loadStudentData(){
+  const uid=currentUser.id;
+  const r=await Promise.allSettled([
+    client.from('questions').select('*').eq('published',true),
+    client.from('question_attempts').select('*').eq('user_id',uid).order('created_at',{ascending:false}),
+    client.from('study_sessions').select('*').eq('user_id',uid).order('created_at',{ascending:false}),
+    client.from('mistakes').select('*').eq('user_id',uid).order('created_at',{ascending:false}),
+    client.from('bookmarks').select('*').eq('user_id',uid),
+    client.from('streaks').select('*').eq('user_id',uid).maybeSingle()
+  ]);
+  const val=i=>r[i].status==='fulfilled'&&!r[i].value.error?r[i].value.data:null;
+  r.forEach((x,i)=>{if(x.status==='rejected'||(x.status==='fulfilled'&&x.value.error))reportNonFatal('Student data request '+i,x.status==='rejected'?x.reason:x.value.error);});
+  questions=val(0)||[];attempts=val(1)||[];sessions=val(2)||[];mistakes=val(3)||[];bookmarks=val(4)||[];streak=val(5)||null;
+}
+function localDateStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+async function touchStreak(){
+  const today=localDateStr();
+  if(!streak){
+    const {data,error}=await client.from('streaks').upsert({user_id:currentUser.id,current_streak:1,longest_streak:1,last_active_date:today},{onConflict:'user_id'}).select().single();
+    if(!error)streak=data;return;
+  }
+  if(streak.last_active_date===today)return;
+  const yest=new Date();yest.setDate(yest.getDate()-1);
+  const yestStr=yest.getFullYear()+'-'+String(yest.getMonth()+1).padStart(2,'0')+'-'+String(yest.getDate()).padStart(2,'0');
+  const newCurrent=streak.last_active_date===yestStr?streak.current_streak+1:1;
+  const newLongest=Math.max(newCurrent,streak.longest_streak);
+  const {data}=await client.from('streaks').update({current_streak:newCurrent,longest_streak:newLongest,last_active_date:today}).eq('id',streak.id).select().single();
+  streak=data;
+}
+async function renderStudentHome(){
+  const today=localDateStr();
+  const todayMinutes=sessions.filter(s=>s.created_at.slice(0,10)===today).reduce((a,s)=>a+s.duration_minutes,0);
+  $('statToday').textContent=todayMinutes+'m';
+  $('statQ').textContent=attempts.length;
+  const correct=attempts.filter(a=>a.is_correct).length;
+  $('statAcc').textContent=attempts.length?Math.round(correct/attempts.length*100)+'%':'0%';
+  $('statStreak').textContent=(streak?streak.current_streak:0)+' days';
+  await renderStudentAnnouncements();
+  await renderStudentTimetable();
+  renderRevisionDue();
+}
+const REVISION_INTERVALS=[1,3,7,14,30];
+function renderRevisionDue(){
+  const now=new Date();
+  const due=mistakes.filter(m=>{
+    if(m.resolved)return false;
+    const days=REVISION_INTERVALS[Math.min(Number(m.revision_count||0),REVISION_INTERVALS.length-1)];
+    const nextDue=new Date(m.last_reviewed_at||m.created_at||Date.now());nextDue.setDate(nextDue.getDate()+days);
+    return nextDue<=now;
+  });
+  $('s_revisionDue').innerHTML=due.length?due.slice(0,5).map(m=>`<div class="file"><div>
+    <div class="fname">${m.mistake_type}</div><div class="meta">Reviewed ${m.revision_count}x</div></div>
+    <button class="btn sm secondary" onclick="markReviewed('${m.id}')">Mark Reviewed</button></div>`).join(''):'<div class="empty">Nothing due</div>';
+}
+async function markReviewed(id){
+  const m=mistakes.find(x=>x.id===id);
+  const {data,error}=await client.from('mistakes').update({revision_count:Number(m.revision_count||0)+1,last_reviewed_at:new Date().toISOString()}).eq('id',id).select().single();
+  if(error)return alert(error.message);
+  Object.assign(m,data);renderRevisionDue();renderMistakes();
+}
+function renderMistakes(){
+  $('mistakeList').innerHTML=mistakes.length?mistakes.map(m=>`<div class="q-card">
+    <div class="topline"><span class="pill">${m.mistake_type}</span>${m.resolved?'<span class="pill green">Resolved</span>':''}</div>
+    <p style="margin:8px 0">${safe(m.note||'')}</p>
+    <div class="actions"><button class="btn sm secondary" onclick="markReviewed('${m.id}')">Mark Reviewed</button></div></div>`).join(''):'<div class="empty">No mistakes saved</div>';
+}
+
+/* ================= BOOKMARKS ================= */
+async function toggleBookmark(itemType,itemId){
+  const existing=bookmarks.find(b=>b.item_type===itemType&&b.item_id===itemId);
+  if(existing){
+    await client.from('bookmarks').delete().eq('id',existing.id);
+    bookmarks=bookmarks.filter(b=>b.id!==existing.id);
+  }else{
+    const {data,error}=await client.from('bookmarks').insert({user_id:currentUser.id,item_type:itemType,item_id:itemId}).select().single();
+    if(!error)bookmarks.push(data);
+  }
+  if(itemType==='document')renderStudentDocs();
+  if(itemType==='question')renderStudentQuestions();
+  renderBookmarks();
+}
+function renderBookmarks(){
+  if(!bookmarks.length){$('bookmarkList').innerHTML='<div class="empty">Nothing bookmarked yet</div>';return;}
+  $('bookmarkList').innerHTML=bookmarks.map(b=>{
+    let label=b.item_type;
+    if(b.item_type==='question'){const q=questions.find(x=>x.id===b.item_id);if(q)label=q.question_text.slice(0,60);}
+    if(b.item_type==='document'){const d=(window._studentDocsCache||[]).find(x=>x.id===b.item_id);if(d)label=d.title;}
+    return `<div class="file"><div class="fname">${safe(label)} <span class="pill">${b.item_type}</span></div>
+      <button class="btn sm danger" onclick="toggleBookmark('${b.item_type}','${b.item_id}')">Remove</button></div>`;
+  }).join('');
+}
+
+/* ================= STUDY TIMER ================= */
+let timerInterval=null,timerSeconds=0,timerMode='stopwatch';
+const POMODORO_SECONDS=25*60;
+function setTimerMode(m){timerMode=m;timerSeconds=m==='pomodoro'?POMODORO_SECONDS:0;updateTimerDisplay();}
+function updateTimerDisplay(){
+  const h=Math.floor(timerSeconds/3600),m=Math.floor((timerSeconds%3600)/60),s=timerSeconds%60;
+  $('timerDisplay').textContent=[h,m,s].map(v=>String(v).padStart(2,'0')).join(':');
+}
+function timerStart(){
+  if(timerInterval)return;
+  $('timerStartBtn').classList.add('hidden');$('timerPauseBtn').classList.remove('hidden');$('timerStopBtn').classList.remove('hidden');
+  timerInterval=setInterval(()=>{
+    if(timerMode==='pomodoro'){timerSeconds--;if(timerSeconds<=0){clearInterval(timerInterval);alert('Pomodoro complete! 🎉');timerStop();return;}}
+    else timerSeconds++;
+    updateTimerDisplay();
+  },1000);
+}
+function timerPause(){clearInterval(timerInterval);timerInterval=null;$('timerPauseBtn').classList.add('hidden');$('timerStartBtn').classList.remove('hidden');}
+async function timerStop(){
+  clearInterval(timerInterval);
+  const elapsed=timerMode==='pomodoro'?POMODORO_SECONDS-timerSeconds:timerSeconds;
+  const minutes=Math.max(1,Math.round(elapsed/60));
+  timerSeconds=timerMode==='pomodoro'?POMODORO_SECONDS:0;updateTimerDisplay();
+  $('timerStartBtn').classList.remove('hidden');$('timerPauseBtn').classList.add('hidden');$('timerStopBtn').classList.add('hidden');
+  const subject_id=$('timerSubject').value||null;
+  const {data,error}=await client.from('study_sessions').insert({user_id:currentUser.id,subject_id,session_type:timerMode,duration_minutes:minutes}).select().single();
+  if(error)return alert(error.message);
+  sessions.unshift(data);await touchStreak();renderSessions();
+  alert(`Saved: ${minutes} minute session ✅`);
+}
+function renderSessions(){
+  $('sessionList').innerHTML=sessions.slice(0,10).length?sessions.slice(0,10).map(s=>{
+    const subj=subjects.find(x=>x.id===s.subject_id);
+    return `<div class="file"><div><div class="fname">${subj?safe(subj.name):'General'} — ${s.duration_minutes}m</div>
+      <div class="meta">${s.session_type} • ${new Date(s.created_at).toLocaleString()}</div></div></div>`;
+  }).join(''):'<div class="empty">No sessions yet</div>';
+}
+
+
+/* ================= SINGLE-FILE LOGIN AUTH ================= */
+let singleAuthBusy=false;
+
+function showLoginMessage(text,type='err'){
+  const el=$('loginMessage'); if(!el)return;
+  el.textContent=text;
+  el.className='login-msg '+(type==='ok'?'ok':'err');
+}
+function clearLoginMessage(){
+  const el=$('loginMessage');
+  if(el){el.textContent='';el.className='login-msg login-hidden';}
+}
+function showLoginTab(tab){
+  const login=tab==='login';
+  $('singleLoginForm')?.classList.toggle('login-hidden',!login);
+  $('singleSignupForm')?.classList.toggle('login-hidden',login);
+  $('loginTabBtn')?.classList.toggle('ghost',!login);
+  $('signupTabBtn')?.classList.toggle('ghost',login);
+  $('singleForgotBtn')?.classList.toggle('login-hidden',!login);
+  clearLoginMessage();
+}
+function setLoginBusy(id,on,label){
+  const b=$(id); if(!b)return;
+  b.disabled=on;
+  if(on){b.dataset.oldText=b.textContent;b.textContent=label||'Please wait...';}
+  else b.textContent=b.dataset.oldText||b.textContent;
+}
+function validLoginEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);}
+function loginHumanError(e){
+  const m=String(e?.message||e||'Unknown error'), low=m.toLowerCase();
+  if(low.includes('invalid login credentials'))return 'Email or password is incorrect.';
+  if(low.includes('email not confirmed'))return 'Please verify your email before signing in.';
+  if(low.includes('user already registered'))return 'This email is already registered. Please log in.';
+  if(low.includes('password'))return 'Password does not meet the required security rules.';
+  if(low.includes('network')||low.includes('fetch'))return 'Network error. Check your internet connection and try again.';
+  if(low.includes('profiles') && low.includes('does not exist'))return 'The Supabase profiles table is missing. Run the supplied SUJANGIRI database SQL once.';
+  if(low.includes('row-level security')||low.includes('permission denied'))return 'Supabase security policy blocked this request. Check the supplied RLS SQL.';
+  return 'Unable to complete the request. Please try again.';
+}
+async function singleLogin(ev){
+  ev.preventDefault(); if(singleAuthBusy)return;
+  clearLoginMessage();
+  const email=$('singleLoginEmail')?.value.trim(), password=$('singleLoginPassword')?.value;
+  if(!validLoginEmail(email))return showLoginMessage('Enter a valid email address.');
+  if(!password)return showLoginMessage('Enter your password.');
+  singleAuthBusy=true; setLoginBusy('singleLoginBtn',true,'Signing in...');
+  try{
+    const {data,error}=await client.auth.signInWithPassword({email,password});
+    if(error)throw error;
+    if(!data?.session)throw new Error('No authenticated session was returned.');
+    // showApp performs profile + role + blocked checks.
+    await showApp(data.session);
+  }catch(e){
+    console.error('Single-file login error:',e);
+    showLoginMessage(loginHumanError(e));
+  }finally{
+    singleAuthBusy=false; setLoginBusy('singleLoginBtn',false);
+  }
+}
+async function singleSignup(ev){
+  ev.preventDefault(); if(singleAuthBusy)return;
+  clearLoginMessage();
+  const name=$('singleSignupName')?.value.trim();
+  const email=$('singleSignupEmail')?.value.trim();
+  const password=$('singleSignupPassword')?.value;
+  if(!name || name.length<2)return showLoginMessage('Enter your full name.');
+  if(!validLoginEmail(email))return showLoginMessage('Enter a valid email address.');
+  if(password.length<8)return showLoginMessage('Password must be at least 8 characters.');
+  singleAuthBusy=true; setLoginBusy('singleSignupBtn',true,'Creating account...');
+  try{
+    const {data,error}=await client.auth.signUp({
+      email,password,options:{data:{full_name:name}}
+    });
+    if(error)throw error;
+    $('singleSignupForm')?.reset();
+    showLoginTab('login');
+    if(data?.session){
+      await showApp(data.session);
+    }else{
+      showLoginMessage('Account created successfully. Please verify your email if required, then log in.','ok');
+    }
+  }catch(e){
+    console.error('Single-file signup error:',e);
+    showLoginMessage(loginHumanError(e));
+  }finally{
+    singleAuthBusy=false; setLoginBusy('singleSignupBtn',false);
+  }
+}
+async function singleForgotPassword(){
+  if(singleAuthBusy)return;
+  clearLoginMessage();
+  const email=$('singleLoginEmail')?.value.trim();
+  if(!validLoginEmail(email))return showLoginMessage('Enter your login email first.');
+  singleAuthBusy=true; setLoginBusy('singleForgotBtn',true,'Sending...');
+  try{
+    const redirectTo=location.protocol==='http:'||location.protocol==='https:'
+      ? new URL(location.pathname.split('/').pop()||'SUJANGIRI_StudyTracker_ONE_FILE.html',location.href).href
+      : location.href.split('#')[0];
+    const {error}=await client.auth.resetPasswordForEmail(email,{redirectTo});
+    if(error)throw error;
+    showLoginMessage('Password reset email sent. Check your inbox and spam folder.','ok');
+  }catch(e){
+    console.error('Single-file password reset error:',e);
+    showLoginMessage(loginHumanError(e));
+  }finally{
+    singleAuthBusy=false; setLoginBusy('singleForgotBtn',false);
+  }
+}
+function setupSingleLogin(){
+  $('loginTabBtn')?.addEventListener('click',()=>showLoginTab('login'));
+  $('signupTabBtn')?.addEventListener('click',()=>showLoginTab('signup'));
+  $('singleLoginForm')?.addEventListener('submit',singleLogin);
+  $('singleSignupForm')?.addEventListener('submit',singleSignup);
+  $('singleForgotBtn')?.addEventListener('click',singleForgotPassword);
+  document.querySelectorAll('[data-login-toggle]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const id=btn.getAttribute('data-login-toggle'),input=$(id);
+      if(!input)return;
+      input.type=input.type==='password'?'text':'password';
+      btn.textContent=input.type==='password'?'👁':'🙈';
+    });
+  });
+  const network=$('singleNetworkStatus');
+  const updateNetwork=()=>{if(network)network.textContent=navigator.onLine?'● Online':'● Offline — login requires an internet connection';};
+  window.addEventListener('online',updateNetwork);
+  window.addEventListener('offline',updateNetwork);
+  updateNetwork();
+  showLoginTab('login');
+}
+
+/* ================= INIT ================= */
+if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark');
+setupSingleLogin();
+let booting=false;
+window.addEventListener('online',()=>bootStatus('Online — continuing…'));
+window.addEventListener('offline',()=>bootStatus('Offline — reconnecting when the network returns…'));
+window.addEventListener('error',e=>console.error('StudyTracker error:',e.error||e.message));
+window.addEventListener('unhandledrejection',e=>console.error('StudyTracker promise error:',e.reason));
+client.auth.onAuthStateChange((event,session)=>{
+  if(event==='SIGNED_OUT'){currentUser=null;profile=null;showLogin();return;}
+  if(event==='PASSWORD_RECOVERY'){showLogin();showLoginMessage('Password reset link accepted. You can now sign in with your new password.','ok');return;}
+  if(session&&!booting)showApp(session);
+});
+(async()=>{
+  try{
+    bootStatus('Checking your secure session…');
+    const {data,error}=await client.auth.getSession();
+    if(error)throw error;
+    if(data.session)await showApp(data.session);else showLogin();
+  }catch(e){bootFailure(e);}
+})();
+</script>
+
+<div id="resetPasswordView" class="hidden" style="position:fixed;inset:0;z-index:6000;background:var(--bg);display:none;place-items:center;padding:20px">
+  <section class="card" style="width:min(460px,100%)">
+    <div class="logo" style="margin-bottom:12px">🔐</div>
+    <h2 style="margin:0">Set a new password</h2>
+    <p class="muted">Choose a new password for your SUJANGIRI account.</p>
+    <div class="login-row">
+      <label for="newPassword">New password</label>
+      <input id="newPassword" class="field" type="password" minlength="8" placeholder="At least 8 characters">
+    </div>
+    <div id="resetMessage" class="msg hidden"></div>
+    <button id="resetPasswordBtn" class="btn" style="width:100%">Update password</button>
+  </section>
+</div>
+
+</body>
+</html>
